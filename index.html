@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Regiões</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    :root {
+      --shopee-primary: #ee4d2d;
+      --shopee-light: #fff3f0;
+      --shopee-dark: #d03e26;
+    }
+
+    body {
+      background: linear-gradient(to right, #ee4d2d, #ff6b3d);
+      font-family: 'Segoe UI', sans-serif;
+      color: #333;
+      padding: 20px;
+    }
+
+    .card {
+      background-color: var(--shopee-light);
+      border-radius: 20px;
+      padding: 35px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h2 {
+      color: var(--shopee-primary);
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #444;
+    }
+
+    .form-control:focus {
+      border-color: var(--shopee-primary);
+      box-shadow: 0 0 0 0.25rem rgba(238, 77, 45, 0.25);
+    }
+
+    .btn-primary,
+    .btn-success {
+      border: none;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background-color: var(--shopee-primary);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--shopee-dark);
+    }
+
+    .btn-success {
+      background-color: #0f8d4f;
+    }
+
+    .btn-success:hover {
+      background-color: #0c6f3d;
+    }
+
+    .badge-region {
+      font-size: 1rem;
+      background-color: var(--shopee-primary);
+      color: white;
+      margin: 5px 5px 0 0;
+      padding: 10px 15px;
+      border-radius: 30px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .badge-region i {
+      margin-left: 10px;
+      cursor: pointer;
+    }
+
+    .alert-info {
+      background-color: #ffe7df;
+      color: #b33a1f;
+      border-left: 5px solid var(--shopee-primary);
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    .form-section {
+      background-color: #fffaf9;
+      padding: 20px;
+      border-radius: 15px;
+    }
+
+    .scroll-info {
+      background-color: var(--shopee-primary);
+      color: white;
+      padding: 10px;
+      font-weight: 500;
+      text-align: center;
+      animation: scroll-updown 10s infinite ease-in-out;
+    }
+
+    @keyframes scroll-updown {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @media (max-width: 576px) {
+      .card {
+        padding: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="scroll-info">PREENHER DE ACORDO COM OS CEPS DA DISPONIBLIDADE OFICIAL</div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Formulário de Regiões</h2>
+      <div class="alert alert-info">
+        <strong>Atenção:</strong> Este formulário tem como objetivo manter atualizados os dados de atuação de cada motorista. É essencial que essas informações estejam sempre corretas para evitar divergências nos registros do sistema. <br>
+        <strong>Importante:</strong> Este preenchimento não representa sua disponibilidade oficial, mas apenas uma atualização cadastral das regiões que você atende no nosso Excel.
+      </div>
+
+      <form id="form-regioes" autocomplete="off">
+        <div class="form-section">
+          <div class="mb-3">
+            <label for="id" class="form-label">ID</label>
+            <input type="text" id="id" name="id" class="form-control" required placeholder="Coloque seu ID corretamente">
+          </div>
+          <div class="mb-3">
+            <label for="nome" class="form-label">Nome</label>
+            <input type="text" id="nome" name="nome" class="form-control" required placeholder="Digite seu nome completo">
+          </div>
+          <div class="mb-3">
+            <label for="cep" class="form-label">CEP</label>
+            <input type="text" id="cep" class="form-control" maxlength="8" placeholder="Digite o CEP (somente números)">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Região encontrada:</label>
+            <input type="text" id="regiao" class="form-control" readonly>
+          </div>
+          <button type="button" class="btn btn-primary w-100 mb-3" id="add-regiao">Adicionar Região</button>
+
+          <div id="lista-regioes" class="mb-3"></div>
+
+          <input type="hidden" id="regioes-consolidadas" name="regioes">
+          <button type="submit" class="btn btn-success w-100">Enviar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalSucesso" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title">Sucesso!</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">Os dados foram enviados com sucesso.</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const cepInput = document.getElementById("cep");
+    const regiaoInput = document.getElementById("regiao");
+    const addButton = document.getElementById("add-regiao");
+    const lista = document.getElementById("lista-regioes");
+    const regioesConsolidadas = document.getElementById("regioes-consolidadas");
+    const form = document.getElementById("form-regioes");
+    let regioes = [];
+
+    cepInput.addEventListener("input", () => {
+      const cep = cepInput.value.replace(/\D/g, "");
+      if (cep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+          .then((res) => res.json())
+          .then((data) => {
+            regiaoInput.value = data?.bairro || "Não encontrado";
+          })
+          .catch(() => regiaoInput.value = "Erro ao buscar");
+      } else {
+        regiaoInput.value = "";
+      }
+    });
+
+    addButton.addEventListener("click", () => {
+      const bairro = regiaoInput.value.trim().toUpperCase();
+      if (bairro && !regioes.includes(bairro)) {
+        if (regioes.length >= 20) return alert("Máximo de 20 regiões.");
+        regioes.push(bairro);
+        renderLista();
+        cepInput.value = "";
+        regiaoInput.value = "";
+      }
+    });
+
+    function renderLista() {
+      lista.innerHTML = "";
+      regioes.forEach((r, i) => {
+        const span = document.createElement("span");
+        span.className = "badge-region";
+        span.innerHTML = `${r} <i class='fas fa-times' onclick='remover(${i})'></i>`;
+        lista.appendChild(span);
+      });
+      regioesConsolidadas.value = regioes.join(" - ") + " - ";
+    }
+
+    window.remover = (index) => {
+      regioes.splice(index, 1);
+      renderLista();
+    };
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (regioes.length < 4) return alert("Adicione pelo menos 4 regiões.");
+      const dados = new FormData(form);
+      dados.set("regioes", regioes.map(r => r.toUpperCase()).join(" - ") + " - ");
+
+      fetch("https://script.google.com/macros/s/AKfycby7zIZtbjstjK-pznpSQugD7oZFmGPVhNnHiC3YbqFxt9c8WHqi-EldqPCdZqG4vW8y/exec", {
+        method: "POST",
+        body: dados,
+      })
+      .then(res => res.text())
+      .then(msg => {
+        if (msg.includes("ERRO")) {
+          alert(msg);
+        } else {
+          bootstrap.Modal.getOrCreateInstance(document.getElementById("modalSucesso")).show();
+          form.reset();
+          regioes = [];
+          renderLista();
+        }
+      })
+      .catch(() => alert("Erro ao enviar."));
+    });
+  </script>
+</body>
+</html>
