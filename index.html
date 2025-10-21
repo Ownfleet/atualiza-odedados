@@ -162,7 +162,7 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // URL base (sem hash), funciona em GitHub Pages e localhost
+    // URL base (sem hash)
     const BASE_URL = (() => {
       const path = location.pathname.replace(/index\.html?$/i, "");
       return location.origin + path + (path.endsWith("/") ? "" : "/");
@@ -227,44 +227,55 @@
     loginBtn.addEventListener("click", async () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: BASE_URL } // volta para a URL base sem hash
+        options: { redirectTo: BASE_URL }
       });
       if (error) alert("Erro: " + error.message);
     });
 
     logoutBtn.addEventListener("click", async () => {
       try {
-        removeHash();               // limpa #access_token da URL
         await supabase.auth.signOut();
       } catch (e) {
         console.warn("Erro ao sair:", e);
       } finally {
-        // redireciona para a base limpa (evita recriar sessão)
+        removeHash();
         window.location.href = BASE_URL;
       }
     });
 
-    supabase.auth.onAuthStateChange(async () => {
-      await boot();
+    // Quando o Supabase terminar de processar o hash (#access_token), este evento dispara
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN") {
+        user = session.user;
+        // agora já é seguro limpar o hash
+        removeHash();
+        await showMain();
+      }
+      if (event === "SIGNED_OUT") {
+        showLogin();
+      }
     });
 
-    async function boot() {
-      // Se veio com hash do provedor, limpa
-      removeHash();
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // não logado
-        loginCard.style.display = "block";
-        mainCard.style.display  = "none";
-        return;
-      }
-
-      user = session.user;
-      userEmail.textContent = user.email || "";
+    function showLogin(){
+      loginCard.style.display = "block";
+      mainCard.style.display  = "none";
+    }
+    async function showMain(){
+      userEmail.textContent = user?.email || "";
       loginCard.style.display = "none";
       mainCard.style.display  = "block";
       await carregarOuCriarVinculo();
+    }
+
+    async function boot() {
+      // NÃO limpar o hash aqui — deixe o Supabase processar primeiro.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        user = session.user;
+        await showMain();
+      } else {
+        showLogin();
+      }
     }
 
     // ========= Vínculo e carga =========
@@ -337,7 +348,6 @@
       const cidade = (cidadeAtual.value || "").trim();
       if (!cep || cep.length !== 8) return alert("Digite um CEP válido (8 dígitos).");
       if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
-      // bloqueia duplicado exatamente igual (mesmo CEP + mesmo bairro)
       if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
       if (itens.length >= 20) return alert("Máximo de 20 entradas.");
 
@@ -355,7 +365,6 @@
 
       const driver_id = (idInput.value || "").trim();
 
-      // Se já tem vínculo e o ID digitado for diferente -> bloqueia
       if (currentDriver && driver_id !== currentDriver) {
         bootstrap.Modal.getOrCreateInstance(document.getElementById("modalAviso")).show();
         return;
@@ -376,7 +385,6 @@
       };
 
       try {
-        // Na primeira vez, vincula o ID ao usuário
         if (!currentDriver) {
           const { error: insErr } = await supabase
             .from("driver_accounts")
@@ -386,7 +394,6 @@
           idInput.readOnly = true;
         }
 
-        // UPSERT no snapshot (RLS no Supabase deve proteger)
         const { error: upErr } = await supabase
           .from("atualizar_bairros")
           .upsert(payload, { onConflict: "driver_id" });
