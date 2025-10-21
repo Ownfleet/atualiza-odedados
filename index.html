@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cadastro de Regiões • Shopee</title>
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <style>
 :root{
   --brand:#ee4d2d; --brand-2:#ff6b3d; --ink:#1f2937;
-  --card:rgba(255,255,255,.9); --radius:20px;
+  --card:rgba(255,255,255,.92); --radius:20px;
   --shadow:0 18px 48px rgba(238,77,45,.25);
 }
 html,body{
@@ -26,373 +28,446 @@ h2{
 .card{
   background:var(--card); backdrop-filter:blur(8px);
   border-radius:var(--radius); border:1px solid rgba(255,255,255,.5);
-  box-shadow:var(--shadow); padding:25px; margin:auto; max-width:950px;
+  box-shadow:var(--shadow); padding:24px; margin:auto; max-width:980px;
 }
-.btn-google{
-  background:#fff; border:none; border-radius:50px; font-weight:700;
-  display:flex; align-items:center; justify-content:center;
-  gap:.6rem; padding:.7rem 1.2rem; box-shadow:0 5px 14px rgba(0,0,0,.1);
-  transition:transform .2s ease,box-shadow .3s ease;
+#login-card{ max-width:460px; text-align:center; }
+.google-btn{
+  border:0; background:#fff; border-radius:999px;
+  box-shadow:0 6px 16px rgba(0,0,0,.12);
+  display:inline-flex; align-items:center; gap:.6rem;
+  padding:.7rem 1.2rem; font-weight:700;
 }
-.btn-google:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.15);}
-.btn-google img{width:22px;height:22px;}
+.google-btn img{ width:22px; height:22px; }
 .badge-region{
   background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;
   display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0;
 }
-.sticky-submit{position:sticky;bottom:0;padding-top:.6rem;background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%);}
+.badge-region i{ cursor:pointer; }
+.sticky-submit{
+  position:sticky;bottom:0;padding-top:.6rem;
+  background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%);
+}
 .alert-info{background:#fff;border-left:6px solid var(--brand);}
-#login-msg{min-height:1.2rem}
+.small-dim{ font-size:.9rem; color:#6b7280; }
 </style>
 </head>
 <body>
-<h2>Cadastro de Regiões • Shopee</h2>
+  <h2>Cadastro de Regiões • Shopee</h2>
 
-<!-- LOGIN -->
-<div id="login-card" class="card text-center" style="max-width:420px;">
-  <p class="mb-3 fw-semibold">Acesse com sua conta Google para continuar</p>
-  <button id="login-google" class="btn-google">
-    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
-    Entrar com Google
-  </button>
-  <div id="login-msg" class="small text-muted mt-2"></div>
-</div>
-
-<!-- APP -->
-<div id="main-card" class="card" style="display:none;">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <div class="fw-bold" id="user-email"></div>
-      <small class="text-muted" id="driver-status"></small>
-    </div>
-    <button id="logout-btn" class="btn btn-outline-danger btn-sm">
-      <i class="fa-solid fa-right-from-bracket"></i> Sair
+  <!-- LOGIN -->
+  <div id="login-card" class="card">
+    <p class="mb-3 fw-semibold">Acesse com sua conta Google para continuar</p>
+    <button id="login-google" class="google-btn">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+      Entrar com Google
     </button>
+    <div id="login-msg" class="small-dim mt-2"></div>
   </div>
 
-  <div class="alert alert-info mb-3">
-    <b>Atenção:</b> mantenha seu cadastro atualizado.<br>
-    <b>Importante:</b> este formulário serve apenas para indicar as regiões (bairros) que você atende.
+  <!-- CONTEÚDO PRINCIPAL -->
+  <div id="main-card" class="card" style="display:none;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <div id="user-email" class="fw-bold"></div>
+        <div id="driver-status" class="small-dim"></div>
+      </div>
+      <button id="logout-btn" class="btn btn-outline-danger btn-sm">
+        <i class="fa-solid fa-right-from-bracket"></i> Sair
+      </button>
+    </div>
+
+    <div class="alert alert-info mb-3">
+      <b>Atenção:</b> mantenha seu cadastro atualizado.<br>
+      <b>Importante:</b> este formulário serve apenas para indicar as regiões (bairros) que você atende.
+    </div>
+
+    <form id="form-regioes" autocomplete="off">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">ID</label>
+          <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Nome</label>
+          <input type="text" id="nome" class="form-control" required placeholder="Seu nome completo">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">CEP</label>
+          <input type="text" id="cep" class="form-control" maxlength="8" placeholder="Somente números">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Região</label>
+          <input type="text" id="regiao" class="form-control" readonly>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Cidade</label>
+          <select id="cidadeAtual" class="form-select">
+            <option selected>Guarulhos</option>
+            <option>São Paulo</option>
+            <option>Mairiporã</option>
+            <option>Outros</option>
+          </select>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Veículo</label>
+          <select id="veiculo" class="form-select">
+            <option selected>Moto</option>
+            <option>Passeio</option>
+            <option>Fiorino</option>
+            <option>Van</option>
+          </select>
+        </div>
+        <div class="col-md-8 d-grid">
+          <label class="form-label invisible">.</label>
+          <button type="button" class="btn btn-primary" id="add-regiao">
+            <i class="fa fa-plus"></i> Adicionar Região (CEP + Bairro + Cidade)
+          </button>
+        </div>
+
+        <div class="col-12">
+          <div id="lista-regioes"></div>
+          <small class="text-muted">Máximo de 20 entradas. Repetir <b>mesmo bairro</b> com <b>CEP diferente</b> é permitido.</small>
+        </div>
+
+        <!-- hidden para envio -->
+        <input type="hidden" id="regioes-consolidadas">
+        <input type="hidden" id="ceps-consolidados">
+        <input type="hidden" id="cidades-consolidadas">
+
+        <div class="col-12 sticky-submit">
+          <button type="submit" class="btn btn-success w-100">
+            <i class="fa fa-paper-plane"></i> Enviar
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 
-  <form id="form-regioes" autocomplete="off">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label">ID</label>
-        <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
+  <!-- Modal bloqueio ID -->
+  <div class="modal fade" id="modalAviso" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">Acesso bloqueado</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="col-md-8">
-        <label class="form-label">Nome</label>
-        <input type="text" id="nome" class="form-control" required placeholder="Seu nome completo">
+      <div class="modal-body fw-semibold">
+        Seu ID não corresponde ao cadastrado.<br>
+        Fale com o responsável para atualizar ou resetar seu cadastro.
       </div>
+    </div></div>
+  </div>
 
-      <div class="col-md-4">
-        <label class="form-label">CEP</label>
-        <input type="text" id="cep" class="form-control" maxlength="8" placeholder="Somente números">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Região</label>
-        <input type="text" id="regiao" class="form-control" readonly>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Cidade</label>
-        <select id="cidadeAtual" class="form-select">
-          <option selected>Guarulhos</option><option>São Paulo</option><option>Mairiporã</option><option>Outros</option>
-        </select>
-      </div>
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-      <div class="col-md-4">
-        <label class="form-label">Veículo</label>
-        <select id="veiculo" class="form-select">
-          <option selected>Moto</option><option>Passeio</option><option>Fiorino</option><option>Van</option>
-        </select>
-      </div>
-      <div class="col-md-8 d-grid">
-        <label class="form-label invisible">.</label>
-        <button type="button" class="btn btn-primary" id="add-regiao"><i class="fa fa-plus"></i> Adicionar Região</button>
-      </div>
+    // === CONFIG SUPABASE ===
+    const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      <div class="col-12">
-        <div id="lista-regioes"></div>
-        <small class="text-muted">Máximo de 20 entradas.</small>
-      </div>
+    // === ELEMENTOS ===
+    const loginCard = document.getElementById("login-card");
+    const mainCard  = document.getElementById("main-card");
+    const loginBtn  = document.getElementById("login-google");
+    const loginMsg  = document.getElementById("login-msg");
+    const logoutBtn = document.getElementById("logout-btn");
 
-      <input type="hidden" id="regioes-consolidadas">
-      <input type="hidden" id="ceps-consolidados">
-      <input type="hidden" id="cidades-consolidadas">
+    const userEmail     = document.getElementById("user-email");
+    const driverStatus  = document.getElementById("driver-status");
+    const idInput       = document.getElementById("id");
+    const nomeInput     = document.getElementById("nome");
+    const cepInput      = document.getElementById("cep");
+    const regiaoInput   = document.getElementById("regiao");
+    const cidadeAtual   = document.getElementById("cidadeAtual");
+    const veiculoSelect = document.getElementById("veiculo");
+    const addButton     = document.getElementById("add-regiao");
+    const lista         = document.getElementById("lista-regioes");
+    const form          = document.getElementById("form-regioes");
+    const cepsConsolidados     = document.getElementById("ceps-consolidados");
+    const regioesConsolidadas  = document.getElementById("regioes-consolidadas");
+    const cidadesConsolidadas  = document.getElementById("cidades-consolidadas");
 
-      <div class="col-12 sticky-submit">
-        <button type="submit" class="btn btn-success w-100"><i class="fa fa-paper-plane"></i> Enviar</button>
-      </div>
-    </div>
-  </form>
-</div>
+    // === ESTADO ===
+    let itens = [];
+    let user  = null;
+    let currentDriver = null;
 
-<!-- Aviso ID divergente -->
-<div class="modal fade" id="modalAviso" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-    <div class="modal-header bg-warning">
-      <h5 class="modal-title">Acesso bloqueado</h5>
-      <button class="btn-close" data-bs-dismiss="modal"></button>
-    </div>
-    <div class="modal-body fw-semibold">
-      Seu ID não corresponde ao cadastrado.<br>
-      Fale com o responsável para atualizar ou resetar seu cadastro.
-    </div>
-  </div></div>
-</div>
+    // === LOGIN GOOGLE ===
+    loginBtn.addEventListener("click", async () => {
+      const redirectTo = window.location.origin + window.location.pathname; // ex: https://ownfleet.github.io/atualiza-odedados/
+      loginMsg.textContent = "";
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: { prompt: "select_account" } // força seleção de conta se necessário
+        }
+      });
+      if (error) {
+        console.error(error);
+        loginMsg.textContent = "Erro ao abrir login do Google.";
+      }
+    });
 
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    // === LOGOUT ===
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await supabase.auth.signOut();
+      } finally {
+        // limpa a URL e volta ao card de login
+        history.replaceState(null, "", window.location.pathname);
+        loginCard.style.display = "block";
+        mainCard.style.display  = "none";
+        loginMsg.textContent    = "";
+      }
+    });
 
-/* ====== SUPABASE ====== */
-const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // === TRATA O RETORNO DO OAUTH (code ou #token) ===
+    async function handleOAuthReturn(){
+      const url = new URL(window.location.href);
 
-/* ====== ELEMENTOS ====== */
-const loginCard = document.getElementById("login-card");
-const loginBtn  = document.getElementById("login-google");
-const loginMsg  = document.getElementById("login-msg");
-const mainCard  = document.getElementById("main-card");
-const logoutBtn = document.getElementById("logout-btn");
-const userEmail = document.getElementById("user-email");
-const driverStatus = document.getElementById("driver-status");
+      // 1) Code flow (?code=...)
+      const code = url.searchParams.get('code');
+      if (code) {
+        try{
+          loginMsg.textContent = "Finalizando login…";
+          // *** CORREÇÃO: precisa passar { code } como objeto ***
+          const { data, error } = await supabase.auth.exchangeCodeForSession({ code });
+          if (error) {
+            console.error("exchangeCodeForSession error:", error);
+            loginMsg.textContent = "Erro de sessão: " + (error.message || error);
+          } else {
+            loginMsg.textContent = "";
+          }
+        }catch(e){
+          console.error("exchangeCodeForSession threw:", e);
+          loginMsg.textContent = "Falha ao trocar código por sessão.";
+        }finally{
+          url.searchParams.delete('code');
+          url.searchParams.delete('state');
+          history.replaceState(null, '', url.toString());
+        }
+        return;
+      }
 
-const idInput=document.getElementById("id");
-const nomeInput=document.getElementById("nome");
-const cepInput=document.getElementById("cep");
-const regiaoInput=document.getElementById("regiao");
-const cidadeAtual=document.getElementById("cidadeAtual");
-const veiculoSelect=document.getElementById("veiculo");
-const addButton=document.getElementById("add-regiao");
-const lista=document.getElementById("lista-regioes");
-const form=document.getElementById("form-regioes");
-const cepsConsolidados=document.getElementById("ceps-consolidados");
-const regioesConsolidadas=document.getElementById("regioes-consolidadas");
-const cidadesConsolidadas=document.getElementById("cidades-consolidadas");
-
-let itens=[]; let currentDriver=null; let user=null;
-
-/* ========= Trata retorno do OAuth: code flow OU implicit flow ========= */
-async function handleOAuthReturn(){
-  // 1) code flow (?code=...)
-  const url = new URL(window.location.href);
-  const code = url.searchParams.get('code');
-  if (code){
-    try{
-      loginMsg.textContent = "Finalizando login…";
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) { loginMsg.textContent = "Erro de sessão: " + error.message; }
-      // limpa querystring
-      url.searchParams.delete('code');
-      url.searchParams.delete('state');
-      history.replaceState(null, '', url.toString());
-      return;
-    }catch(e){
-      loginMsg.textContent = "Falha ao trocar código por sessão.";
-      console.warn(e);
-    }
-  }
-
-  // 2) implicit flow (#access_token=...)
-  if (location.hash.includes('access_token')){
-    const params = new URLSearchParams(location.hash.substring(1));
-    const access_token  = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-    if (access_token && refresh_token){
-      try{
-        loginMsg.textContent = "Finalizando login…";
-        await supabase.auth.setSession({ access_token, refresh_token });
-      }catch(e){
-        loginMsg.textContent = "Falha ao definir sessão.";
-        console.warn(e);
+      // 2) Implicit flow (#access_token=...)
+      if (location.hash.includes('access_token')){
+        const params = new URLSearchParams(location.hash.substring(1));
+        const access_token  = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        if (access_token && refresh_token){
+          try{
+            loginMsg.textContent = "Finalizando login…";
+            const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+            if (error){
+              console.error("setSession error:", error);
+              loginMsg.textContent = "Falha ao definir sessão.";
+            } else {
+              loginMsg.textContent = "";
+            }
+          }catch(e){
+            console.error("setSession threw:", e);
+            loginMsg.textContent = "Falha ao definir sessão.";
+          }
+        }
+        history.replaceState(null, '', window.location.pathname);
       }
     }
-    history.replaceState(null, '', window.location.pathname);
-  }
-}
 
-/* ========= Login/Logout ========= */
-loginBtn.addEventListener("click", async()=>{
-  loginMsg.textContent = "Abrindo login do Google…";
-  const redirectTo = window.location.origin + window.location.pathname; // volta exatamente aqui
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo,
-      queryParams: { prompt: "select_account" }
+    // === BOOT ===
+    async function boot(){
+      await handleOAuthReturn();
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        loginCard.style.display = "block";
+        mainCard.style.display  = "none";
+        return;
+      }
+
+      user = session.user;
+      userEmail.textContent = user.email || "";
+      loginCard.style.display = "none";
+      mainCard.style.display  = "block";
+
+      // carregar vínculo e snapshot
+      await carregarOuCriarVinculo();
     }
-  });
-  if (error) loginMsg.textContent = "Erro ao abrir login: " + error.message;
-});
 
-logoutBtn.addEventListener("click", async()=>{
-  try { await supabase.auth.signOut(); } catch {}
-  localStorage.removeItem('sb-' + SUPABASE_URL + '-auth-token');
-  location.replace(window.location.pathname);
-});
+    // === VÍNCULO driver_id -> user ===
+    async function carregarOuCriarVinculo(){
+      const { data, error } = await supabase
+        .from("driver_accounts")
+        .select("driver_id,nome")
+        .maybeSingle();
+      if (error) console.warn(error);
 
-/* ========= Boot ========= */
-async function ensureSession(){
-  const { data:{ session } } = await supabase.auth.getSession();
-  return session ?? null;
-}
+      if (data?.driver_id){
+        currentDriver = data.driver_id;
+        idInput.value = currentDriver;
+        idInput.readOnly = true;
+        driverStatus.textContent = "Vinculado ao seu login.";
+        if (data?.nome) nomeInput.value = data.nome;
+        await carregarCadastro(currentDriver);
+      } else {
+        driverStatus.textContent = "Sem ID vinculado. Informe seu ID e salve.";
+        idInput.readOnly = false;
+      }
+    }
 
-async function boot(){
-  await handleOAuthReturn();
+    // === CEP -> BAIRRO ===
+    cepInput.addEventListener("input", () => {
+      const cep = cepInput.value.replace(/\D/g, "");
+      if (cep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+          .then(r => r.json())
+          .then(d => regiaoInput.value = d?.bairro || "Não encontrado")
+          .catch(() => regiaoInput.value = "Erro ao buscar");
+      } else {
+        regiaoInput.value = "";
+      }
+    });
 
-  const session = await ensureSession();
-  if (!session){
-    loginCard.style.display="block";
-    mainCard.style.display="none";
-    return;
-  }
-  user = session.user;
-  userEmail.textContent = user.email || "";
-  loginMsg.textContent = "";
-  loginCard.style.display="none";
-  mainCard.style.display="block";
-  await carregarOuCriarVinculo();
-}
+    // === LISTA REGIÕES ===
+    function renderLista(){
+      lista.innerHTML = "";
+      itens.forEach((it, i) => {
+        const s = document.createElement("span");
+        s.className = "badge-region";
+        s.innerHTML = `${it.bairro} <small>(${it.cep})</small> <i class="fa fa-times" title="Remover" onclick="remover(${i})"></i>`;
+        lista.appendChild(s);
+      });
+    }
+    function updateHidden(){
+      cepsConsolidados.value    = itens.map(x => x.cep).join(",");
+      regioesConsolidadas.value = itens.map(x => x.bairro).join(",");
+      cidadesConsolidadas.value = itens.map(x => x.cidade).join(",");
+    }
+    window.remover = (idx) => { itens.splice(idx,1); renderLista(); updateHidden(); };
 
-supabase.auth.onAuthStateChange((_e,_s)=>boot());
+    addButton.addEventListener("click", () => {
+      const cep    = (cepInput.value || "").trim();
+      const bairro = (regiaoInput.value || "").trim().toUpperCase();
+      const cidade = (cidadeAtual.value || "").trim();
+      if (!cep || cep.length !== 8) return alert("Digite um CEP válido (8 dígitos).");
+      if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
+      if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
+      if (itens.length >= 20) return alert("Máximo de 20 entradas.");
 
-/* ========= Driver bind ========= */
-async function carregarOuCriarVinculo(){
-  const { data, error } = await supabase
-    .from("driver_accounts")
-    .select("driver_id,nome")
-    .maybeSingle();
-  if (error) console.warn('driver_accounts', error);
+      itens.push({ cep, bairro, cidade });
+      renderLista(); updateHidden();
+      cepInput.value = ""; regiaoInput.value = "";
+    });
 
-  if (data?.driver_id){
-    currentDriver = data.driver_id;
-    idInput.value = currentDriver;
-    idInput.readOnly = true;
-    nomeInput.value = data.nome || "";
-    driverStatus.textContent = "Vinculado ao seu login.";
-    await carregarCadastro(currentDriver);
-  } else {
-    driverStatus.textContent = "Sem ID vinculado. Informe seu ID e salve.";
-  }
-}
+    // === CARREGAR SNAPSHOT ===
+    function csvToArray(csv){ return csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : []; }
 
-/* ========= ViaCEP ========= */
-cepInput.addEventListener("input", ()=>{
-  const cep = cepInput.value.replace(/\D/g,"");
-  if (cep.length===8){
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      .then(r=>r.json())
-      .then(d=>regiaoInput.value = d?.bairro || "Não encontrado")
-      .catch(()=>regiaoInput.value="Erro");
-  } else {
-    regiaoInput.value = "";
-  }
-});
+    async function carregarCadastro(driverId){
+      const { data, error } = await supabase
+        .from("atualizar_bairros")
+        .select("*")
+        .eq("driver_id", driverId)
+        .maybeSingle();
+      if (error) { console.warn(error); return; }
 
-/* ========= Chips ========= */
-addButton.addEventListener("click", ()=>{
-  const cep=(cepInput.value||"").trim();
-  const bairro=(regiaoInput.value||"").trim().toUpperCase();
-  const cidade=cidadeAtual.value.trim();
-  if (!cep || cep.length!==8) return alert("CEP inválido");
-  if (!bairro) return alert("Busque o CEP primeiro");
-  if (itens.some(x=>x.cep===cep && x.bairro===bairro)) return;
-  if (itens.length>=20) return alert("Máximo de 20 entradas.");
-  itens.push({ cep, bairro, cidade });
-  renderLista(); updateHidden();
-  cepInput.value=""; regiaoInput.value="";
-});
-function renderLista(){
-  lista.innerHTML = "";
-  itens.forEach((x,i)=>{
-    const s = document.createElement("span");
-    s.className = "badge-region";
-    s.innerHTML = `${x.bairro} <small>(${x.cep})</small> <i class="fa fa-times" style="cursor:pointer" onclick="remover(${i})"></i>`;
-    lista.appendChild(s);
-  });
-}
-window.remover = (i)=>{ itens.splice(i,1); renderLista(); updateHidden(); };
-function updateHidden(){
-  cepsConsolidados.value    = itens.map(x=>x.cep).join(",");
-  regioesConsolidadas.value = itens.map(x=>x.bairro).join(",");
-  cidadesConsolidadas.value = itens.map(x=>x.cidade).join(",");
-}
+      if (data){
+        if (data.nome) nomeInput.value = data.nome;
+        if (data.veiculo) veiculoSelect.value = data.veiculo;
 
-/* ========= Snapshot ========= */
-async function carregarCadastro(driverId){
-  const { data, error } = await supabase
-    .from("atualizar_bairros")
-    .select("*")
-    .eq("driver_id", driverId)
-    .maybeSingle();
-  if (error) { console.warn("atualizar_bairros", error); return; }
-  if (!data) { itens=[]; renderLista(); updateHidden(); return; }
+        const arrCeps    = csvToArray(data.ceps);
+        const arrBairros = csvToArray(data.regioes);
+        const arrCidades = csvToArray(data.cidades);
 
-  nomeInput.value = data.nome || nomeInput.value;
-  veiculoSelect.value = data.veiculo || veiculoSelect.value;
+        itens = [];
+        const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
+        for (let i=0;i<n;i++){
+          const cep = (arrCeps[i]||"").trim();
+          const bairro = (arrBairros[i]||"").trim().toUpperCase();
+          const cidade = (arrCidades[i]||"").trim() || "Guarulhos";
+          if (cep && bairro) itens.push({ cep, bairro, cidade });
+        }
+        renderLista(); updateHidden();
+      } else {
+        itens = []; renderLista(); updateHidden();
+      }
+    }
 
-  const ceps = (data.ceps||"").split(",");
-  const b    = (data.regioes||"").split(",");
-  const c    = (data.cidades||"").split(",");
+    idInput.addEventListener("change", () => carregarCadastro(idInput.value.trim()));
+    idInput.addEventListener("blur",   () => carregarCadastro(idInput.value.trim()));
 
-  itens=[];
-  for (let i=0;i<ceps.length;i++){
-    if (ceps[i]) itens.push({ cep:ceps[i], bairro:(b[i]||"").toUpperCase(), cidade:c[i]||"Guarulhos" });
-  }
-  renderLista(); updateHidden();
-}
+    // === SUBMIT (UPSERT + LOG) ===
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return alert("Faça login com Google primeiro.");
 
-/* ========= Submit ========= */
-form.addEventListener("submit", async(e)=>{
-  e.preventDefault();
-  if (!user) return alert("Faça login com Google primeiro.");
-  const driver_id = (idInput.value||"").trim();
+      if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
 
-  if (currentDriver && driver_id!==currentDriver){
-    bootstrap.Modal.getOrCreateInstance(document.getElementById("modalAviso")).show();
-    return;
-  }
-  if (itens.length < 1) return alert("Adicione pelo menos 4 entradas (CEP + Bairro).");
+      const driver_id = currentDriver || (idInput.value || "").trim();
 
-  const payload = {
-    driver_id,
-    nome:(nomeInput.value||"").trim(),
-    ceps:cepsConsolidados.value.trim(),
-    regioes:regioesConsolidadas.value.trim(),
-    cidades:cidadesConsolidadas.value.trim(),
-    veiculo:veiculoSelect.value.trim(),
-    updated_at:new Date().toISOString(),
-    user_id:user.id
-  };
+      // Se já houver vínculo, não permite trocar ID
+      if (currentDriver && driver_id !== currentDriver){
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("modalAviso")).show();
+        return;
+      }
 
-  if (!currentDriver){
-    const { error: bindErr } = await supabase
-      .from("driver_accounts")
-      .insert({ user_id:user.id, driver_id:driver_id, nome:payload.nome });
-    if (bindErr){ alert("Erro ao vincular ID: " + bindErr.message); return; }
-    currentDriver = driver_id;
-    idInput.readOnly = true;
-  }
+      const payload = {
+        driver_id,
+        nome: (nomeInput.value || "").trim(),
+        ceps: (cepsConsolidados.value || "").trim(),
+        regioes: (regioesConsolidadas.value || "").trim(),
+        cidades: (cidadesConsolidadas.value || "").trim(),
+        veiculo: (veiculoSelect.value || "").trim(),
+        updated_at: new Date().toISOString(),
+        user_id: session.user.id
+      };
 
-  const { error: upsertErr } = await supabase
-    .from("atualizar_bairros")
-    .upsert(payload, { onConflict:"driver_id" });
-  if (upsertErr) return alert("Erro ao salvar: " + upsertErr.message);
+      try{
+        // Primeiro vínculo (se não existir)
+        if (!currentDriver){
+          const { error: vErr } = await supabase
+            .from("driver_accounts")
+            .insert({ user_id: session.user.id, driver_id, nome: payload.nome });
+          if (vErr) throw vErr;
+          currentDriver = driver_id;
+          idInput.readOnly = true;
+          driverStatus.textContent = "Vinculado ao seu login.";
+        }
 
-  await supabase.from("atualizar_bairros_log").insert({
-    driver_id: payload.driver_id,
-    nome: payload.nome, ceps: payload.ceps,
-    regioes: payload.regioes, cidades: payload.cidades,
-    veiculo: payload.veiculo, created_at: payload.updated_at
-  });
+        // UPSERT snapshot
+        const { error: upErr } = await supabase
+          .from("atualizar_bairros")
+          .upsert(payload, { onConflict: "driver_id" });
+        if (upErr) throw upErr;
 
-  alert("Dados enviados com sucesso!");
-});
+        // LOG histórico
+        const { error: logErr } = await supabase
+          .from("atualizar_bairros_log")
+          .insert({
+            driver_id: payload.driver_id,
+            nome: payload.nome,
+            ceps: payload.ceps,
+            regioes: payload.regioes,
+            cidades: payload.cidades,
+            veiculo: payload.veiculo,
+            created_at: payload.updated_at
+          });
+        if (logErr) throw logErr;
 
-/* start */
-boot();
-</script>
+        alert("Dados enviados com sucesso!");
+      }catch(err){
+        console.error(err);
+        alert("Erro ao salvar: " + (err?.message || err));
+      }
+    });
+
+    // reativa view após mudanças de sessão
+    supabase.auth.onAuthStateChange((_e,_s)=>boot());
+
+    // start
+    await boot();
+  </script>
 </body>
 </html>
