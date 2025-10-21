@@ -42,6 +42,7 @@ h2{
 }
 .sticky-submit{position:sticky;bottom:0;padding-top:.6rem;background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%);}
 .alert-info{background:#fff;border-left:6px solid var(--brand);}
+#login-msg{min-height:1.2rem}
 </style>
 </head>
 <body>
@@ -144,7 +145,7 @@ h2{
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/* ====== CONFIG ====== */
+/* ====== SUPABASE ====== */
 const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -173,61 +174,73 @@ const cidadesConsolidadas=document.getElementById("cidades-consolidadas");
 
 let itens=[]; let currentDriver=null; let user=null;
 
-/* ========= 1) CONSUME O HASH #access_token APÓS OAUTH (implicit grant) ========= */
-async function consumeHashSessionIfPresent(){
-  // Ex.: #access_token=...&refresh_token=...&token_type=bearer&...
-  if (!location.hash || !location.hash.includes('access_token')) return;
-
-  const params = new URLSearchParams(location.hash.substring(1));
-  const access_token  = params.get('access_token');
-  const refresh_token = params.get('refresh_token');
-
-  if (access_token && refresh_token){
+/* ========= Trata retorno do OAuth: code flow OU implicit flow ========= */
+async function handleOAuthReturn(){
+  // 1) code flow (?code=...)
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get('code');
+  if (code){
     try{
-      // Grava a sessão dentro do Supabase-js (localStorage)
-      const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
-      if (error) console.warn('setSession error', error);
-    }catch(e){ console.warn('setSession exc', e); }
+      loginMsg.textContent = "Finalizando login…";
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) { loginMsg.textContent = "Erro de sessão: " + error.message; }
+      // limpa querystring
+      url.searchParams.delete('code');
+      url.searchParams.delete('state');
+      history.replaceState(null, '', url.toString());
+      return;
+    }catch(e){
+      loginMsg.textContent = "Falha ao trocar código por sessão.";
+      console.warn(e);
+    }
   }
-  // Limpa o hash da URL para não “sujar” o histórico
-  history.replaceState(null, '', window.location.pathname);
+
+  // 2) implicit flow (#access_token=...)
+  if (location.hash.includes('access_token')){
+    const params = new URLSearchParams(location.hash.substring(1));
+    const access_token  = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token){
+      try{
+        loginMsg.textContent = "Finalizando login…";
+        await supabase.auth.setSession({ access_token, refresh_token });
+      }catch(e){
+        loginMsg.textContent = "Falha ao definir sessão.";
+        console.warn(e);
+      }
+    }
+    history.replaceState(null, '', window.location.pathname);
+  }
 }
 
-/* ========= 2) LOGIN / LOGOUT ========= */
+/* ========= Login/Logout ========= */
 loginBtn.addEventListener("click", async()=>{
   loginMsg.textContent = "Abrindo login do Google…";
-  const redirectTo = window.location.origin + window.location.pathname; // volta exatamente para esta página
+  const redirectTo = window.location.origin + window.location.pathname; // volta exatamente aqui
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo,
-      // fluxo implícito mantém o comportamento atual (#access_token)
-      // se quiser migrar para code flow (recomendado), remova isso
-      // e troque a leitura pelo exchangeCodeForSession (não é o seu caso agora).
-      queryParams: { prompt: 'select_account' }
+      queryParams: { prompt: "select_account" }
     }
   });
-  if (error) {
-    loginMsg.textContent = "Erro ao abrir login: " + error.message;
-  }
+  if (error) loginMsg.textContent = "Erro ao abrir login: " + error.message;
 });
 
 logoutBtn.addEventListener("click", async()=>{
-  try{
-    await supabase.auth.signOut();
-  }catch(e){ /* ignore */ }
-  localStorage.removeItem('sb-' + SUPABASE_URL + '-auth-token'); // failsafe
+  try { await supabase.auth.signOut(); } catch {}
+  localStorage.removeItem('sb-' + SUPABASE_URL + '-auth-token');
   location.replace(window.location.pathname);
 });
 
-/* ========= 3) BOOTSTRAP DA PÁGINA ========= */
+/* ========= Boot ========= */
 async function ensureSession(){
   const { data:{ session } } = await supabase.auth.getSession();
   return session ?? null;
 }
 
 async function boot(){
-  await consumeHashSessionIfPresent();  // <- pega o token devolvido pelo Google
+  await handleOAuthReturn();
 
   const session = await ensureSession();
   if (!session){
@@ -237,22 +250,20 @@ async function boot(){
   }
   user = session.user;
   userEmail.textContent = user.email || "";
+  loginMsg.textContent = "";
   loginCard.style.display="none";
   mainCard.style.display="block";
-
-  // Carrega / vincula ID
   await carregarOuCriarVinculo();
 }
 
-supabase.auth.onAuthStateChange((_e,_s)=>boot()); // reforço: se sessão mudar, re-render
+supabase.auth.onAuthStateChange((_e,_s)=>boot());
 
-/* ========= 4) DRIVER BIND ========== */
+/* ========= Driver bind ========= */
 async function carregarOuCriarVinculo(){
   const { data, error } = await supabase
     .from("driver_accounts")
     .select("driver_id,nome")
     .maybeSingle();
-
   if (error) console.warn('driver_accounts', error);
 
   if (data?.driver_id){
@@ -267,7 +278,7 @@ async function carregarOuCriarVinculo(){
   }
 }
 
-/* ========= 5) CEP -> ViaCEP ========= */
+/* ========= ViaCEP ========= */
 cepInput.addEventListener("input", ()=>{
   const cep = cepInput.value.replace(/\D/g,"");
   if (cep.length===8){
@@ -280,7 +291,7 @@ cepInput.addEventListener("input", ()=>{
   }
 });
 
-/* ========= 6) REGIÕES (chips) ========= */
+/* ========= Chips ========= */
 addButton.addEventListener("click", ()=>{
   const cep=(cepInput.value||"").trim();
   const bairro=(regiaoInput.value||"").trim().toUpperCase();
@@ -293,7 +304,6 @@ addButton.addEventListener("click", ()=>{
   renderLista(); updateHidden();
   cepInput.value=""; regiaoInput.value="";
 });
-
 function renderLista(){
   lista.innerHTML = "";
   itens.forEach((x,i)=>{
@@ -304,14 +314,13 @@ function renderLista(){
   });
 }
 window.remover = (i)=>{ itens.splice(i,1); renderLista(); updateHidden(); };
-
 function updateHidden(){
   cepsConsolidados.value    = itens.map(x=>x.cep).join(",");
   regioesConsolidadas.value = itens.map(x=>x.bairro).join(",");
   cidadesConsolidadas.value = itens.map(x=>x.cidade).join(",");
 }
 
-/* ========= 7) CARREGAR SNAPSHOT ========= */
+/* ========= Snapshot ========= */
 async function carregarCadastro(driverId){
   const { data, error } = await supabase
     .from("atualizar_bairros")
@@ -335,7 +344,7 @@ async function carregarCadastro(driverId){
   renderLista(); updateHidden();
 }
 
-/* ========= 8) SUBMIT ========= */
+/* ========= Submit ========= */
 form.addEventListener("submit", async(e)=>{
   e.preventDefault();
   if (!user) return alert("Faça login com Google primeiro.");
@@ -358,7 +367,6 @@ form.addEventListener("submit", async(e)=>{
     user_id:user.id
   };
 
-  // primeira vez: vincula o driver_id ao user_id
   if (!currentDriver){
     const { error: bindErr } = await supabase
       .from("driver_accounts")
@@ -373,7 +381,6 @@ form.addEventListener("submit", async(e)=>{
     .upsert(payload, { onConflict:"driver_id" });
   if (upsertErr) return alert("Erro ao salvar: " + upsertErr.message);
 
-  // log histórico
   await supabase.from("atualizar_bairros_log").insert({
     driver_id: payload.driver_id,
     nome: payload.nome, ceps: payload.ceps,
