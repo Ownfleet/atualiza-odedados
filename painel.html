@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Painel Shopee Express • Regiões</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- CryptoJS para hashes -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+<style>
+:root{
+  --brand:#ee4d2d; --brand-2:#ff6b3d; --ink:#1f2937;
+  --card:rgba(255,255,255,.92); --radius:18px;
+  --shadow:0 18px 48px rgba(238,77,45,.25);
+}
+body{
+  min-height:100vh;
+  background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  color:var(--ink);
+  padding:20px;
+}
+h2{color:#fff;text-align:center;font-weight:900;margin-bottom:24px;text-shadow:0 3px 10px rgba(0,0,0,.25);}
+.card{background:var(--card);backdrop-filter:blur(10px);border-radius:var(--radius);box-shadow:var(--shadow);}
+.table thead{background:var(--brand);color:#fff;}
+.btn-brand{background:var(--brand);color:#fff;font-weight:700;border:none;border-radius:10px;}
+.btn-brand:hover{background:#d94526;}
+#login-box{max-width:420px;margin:100px auto;text-align:center;padding:30px;border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow);}
+#panel{display:none;}
+.badge-id{background:var(--brand);color:#fff;border-radius:8px;padding:2px 8px;font-size:.85rem;}
+.input-group-text{background:#fff;border-left:none;cursor:pointer;}
+</style>
+</head>
+<body>
+<h2>Painel de Regiões • Shopee Express</h2>
+
+<!-- LOGIN -->
+<div id="login-box">
+  <h5 class="fw-bold mb-3">Acesso restrito</h5>
+  <p class="text-muted">Digite a senha para acessar o painel.</p>
+
+  <div class="input-group mb-3">
+    <input type="password" id="senha" class="form-control text-center" placeholder="Senha de acesso">
+    <span class="input-group-text" id="toggleSenha" title="Mostrar/ocultar senha"><i class="fa fa-eye"></i></span>
+  </div>
+
+  <button id="entrar" class="btn btn-brand w-100"><i class="fa fa-lock-open"></i> Entrar</button>
+  <div id="login-erro" class="small mt-3 fw-semibold"></div>
+</div>
+
+<!-- PAINEL -->
+<div id="panel" class="card p-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div class="d-flex gap-2">
+      <input type="text" id="busca" class="form-control" placeholder="Buscar ID ou nome">
+      <input type="text" id="idsFiltro" class="form-control" placeholder="IDs separados por vírgula">
+      <button id="filtrar" class="btn btn-outline-dark"><i class="fa fa-filter"></i></button>
+    </div>
+    <div class="d-flex gap-2">
+      <button id="copiarGeral" class="btn btn-outline-primary"><i class="fa fa-copy"></i> Copiar geral</button>
+      <button id="copiarSelecionado" class="btn btn-outline-primary"><i class="fa fa-copy"></i> Copiar IDs</button>
+      <button id="exportarGeral" class="btn btn-brand"><i class="fa fa-file-excel"></i> Exportar geral</button>
+      <button id="exportarSelecionado" class="btn btn-brand"><i class="fa fa-file-excel"></i> Exportar IDs</button>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped align-middle text-center" id="tabela">
+      <thead><tr>
+        <th>ID</th><th>Nome</th><th>CEPs</th><th>Bairros</th><th>Cidades</th><th>Veículo</th><th>Atualizado</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// === CONFIGURE AQUI SEU PROJETO SUPABASE ===
+const SUPABASE_URL="https://rsevfpyozrbhgqnhzcjz.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// elementos
+const senhaInput = document.getElementById("senha");
+const entrarBtn  = document.getElementById("entrar");
+const erroBox    = document.getElementById("login-erro");
+const loginBox   = document.getElementById("login-box");
+const panel      = document.getElementById("panel");
+const toggleSenha= document.getElementById("toggleSenha");
+
+// Mostrar / ocultar senha
+toggleSenha.addEventListener("click",()=>{
+  const show = senhaInput.type === "password";
+  senhaInput.type = show ? "text" : "password";
+  toggleSenha.innerHTML = show ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+});
+
+// Pressionar Enter
+senhaInput.addEventListener("keydown",(e)=>{ if(e.key==="Enter") entrarBtn.click(); });
+
+// normaliza texto (remove espaços/quebras e baixa-caso)
+const norm = s => (s || "").toString().trim().replace(/\s+/g,"").toLowerCase();
+
+// Login tolerante (MD5, SHA-1, SHA-256; com/sem newline)
+entrarBtn.addEventListener("click", async ()=>{
+  const senha = (senhaInput.value || "").trim();
+  if(!senha){ erroBox.textContent = "⚠️ Digite a senha."; erroBox.style.color = "red"; return; }
+
+  const { data, error } = await supabase
+    .from("painel_senhas")
+    .select("senha_hash")
+    .eq("nome","painel_shopee")
+    .maybeSingle();
+
+  if(error){ erroBox.textContent="Erro ao verificar senha."; erroBox.style.color="red"; return; }
+  if(!data?.senha_hash){ erroBox.textContent="Senha do painel não configurada."; erroBox.style.color="red"; return; }
+
+  const stored = norm(data.senha_hash).replace(/^sha(256|1):/,"");
+
+  // Calcula MD5 / SHA-1 / SHA-256 com e sem \n e \r\n
+  const candidates = new Set([
+    CryptoJS.MD5(senha).toString().toLowerCase(),
+    CryptoJS.SHA1(senha).toString().toLowerCase(),
+    CryptoJS.SHA256(senha).toString().toLowerCase(),
+
+    CryptoJS.MD5(senha + "\n").toString().toLowerCase(),
+    CryptoJS.SHA1(senha + "\n").toString().toLowerCase(),
+    CryptoJS.SHA256(senha + "\n").toString().toLowerCase(),
+
+    CryptoJS.MD5(senha + "\r\n").toString().toLowerCase(),
+    CryptoJS.SHA1(senha + "\r\n").toString().toLowerCase(),
+    CryptoJS.SHA256(senha + "\r\n").toString().toLowerCase(),
+  ]);
+
+  if (candidates.has(stored)) {
+    erroBox.textContent = "✔️ Acesso liberado";
+    erroBox.style.color = "green";
+    setTimeout(()=>{ loginBox.style.display="none"; panel.style.display="block"; carregarTabela(); }, 300);
+  } else {
+    erroBox.textContent = "❌ Senha incorreta.";
+    erroBox.style.color = "red";
+  }
+});
+
+// ===== Tabela (listar, buscar, filtrar) =====
+async function carregarTabela(filtroIds=null, termo=null){
+  const { data, error } = await supabase.from("atualizar_bairros").select("*");
+  if(error){ alert("Erro ao carregar dados: " + error.message); return; }
+  let dados = [...data];
+
+  if(termo){
+    const t = termo.toLowerCase();
+    dados = dados.filter(d => d.nome?.toLowerCase().includes(t) || d.driver_id?.toLowerCase().includes(t));
+  }
+
+  if(filtroIds){
+    const ids = filtroIds.split(",").map(s=>s.trim()).filter(Boolean);
+    dados = dados.filter(d => ids.includes(d.driver_id));
+  }
+
+  dados.sort((a,b)=> (a.nome||"").localeCompare(b.nome||""));
+
+  const tbody = document.querySelector("#tabela tbody");
+  tbody.innerHTML = "";
+  dados.forEach(d=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><span class="badge-id">${d.driver_id||""}</span></td>
+      <td>${d.nome||""}</td>
+      <td>${formatCsv(d.ceps||"")}</td>
+      <td>${formatCsv(d.regioes||"")}</td>
+      <td>${formatCsv(d.cidades||"")}</td>
+      <td>${d.veiculo||""}</td>
+      <td>${d.updated_at ? new Date(d.updated_at).toLocaleString("pt-BR") : ""}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// normaliza CSV em "a, b, c"
+function formatCsv(str){
+  if(!str) return "";
+  return str
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+document.getElementById("filtrar").onclick = ()=>{
+  const ids = document.getElementById("idsFiltro").value;
+  const termo = document.getElementById("busca").value;
+  carregarTabela(ids||null, termo||null);
+};
+
+// ===== Copiar (TSV) e Exportar =====
+function copiarTexto(texto){
+  navigator.clipboard.writeText(texto);
+  alert("Copiado para a área de transferência!");
+}
+
+// Copiar GERAL: sem cabeçalho; TSV para colar no Excel
+document.getElementById("copiarGeral").onclick = async ()=>{
+  const { data, error } = await supabase.from("atualizar_bairros").select("*");
+  if(error){ return alert("Erro ao buscar dados: " + error.message); }
+  if(!data?.length) return alert("Nenhum registro encontrado.");
+
+  const linhas = data.map(d => [
+    d.driver_id || "",
+    d.nome || "",
+    formatCsv(d.ceps || ""),
+    formatCsv(d.regioes || ""),
+    formatCsv(d.cidades || ""),
+    d.veiculo || "",
+    d.updated_at ? new Date(d.updated_at).toLocaleString("pt-BR") : ""
+  ].join("\t"));
+
+  copiarTexto(linhas.join("\n"));
+};
+
+// Copiar SOMENTE IDs informados: também sem cabeçalho; TSV
+document.getElementById("copiarSelecionado").onclick = async ()=>{
+  const ids = document.getElementById("idsFiltro").value;
+  if(!ids) return alert("Informe IDs.");
+  const arr = ids.split(",").map(s=>s.trim()).filter(Boolean);
+
+  const { data, error } = await supabase
+    .from("atualizar_bairros")
+    .select("*")
+    .in("driver_id", arr);
+
+  if(error){ return alert("Erro ao buscar IDs: " + error.message); }
+  if(!data?.length) return alert("Nenhum registro encontrado para esses IDs.");
+
+  const linhas = data.map(d => [
+    d.driver_id || "",
+    d.nome || "",
+    formatCsv(d.ceps || ""),
+    formatCsv(d.regioes || ""),
+    formatCsv(d.cidades || ""),
+    d.veiculo || "",
+    d.updated_at ? new Date(d.updated_at).toLocaleString("pt-BR") : ""
+  ].join("\t"));
+
+  copiarTexto(linhas.join("\n"));
+};
+
+// Exportar tudo em Excel
+function exportarParaExcel(dados, nomeArquivo){
+  const ws = XLSX.utils.json_to_sheet(dados);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Regiões");
+  XLSX.writeFile(wb, nomeArquivo);
+}
+
+document.getElementById("exportarGeral").onclick = async ()=>{
+  const { data, error } = await supabase.from("atualizar_bairros").select("*");
+  if(error){ return alert("Erro ao exportar: " + error.message); }
+  exportarParaExcel(data||[], "Regioes_Geral.xlsx");
+};
+
+document.getElementById("exportarSelecionado").onclick = async ()=>{
+  const ids = document.getElementById("idsFiltro").value;
+  if(!ids) return alert("Informe IDs.");
+  const arr = ids.split(",").map(s=>s.trim()).filter(Boolean);
+
+  const { data, error } = await supabase
+    .from("atualizar_bairros")
+    .select("*")
+    .in("driver_id", arr);
+
+  if(error){ return alert("Erro ao exportar: " + error.message); }
+  exportarParaExcel(data||[], "Regioes_Selecionadas.xlsx");
+};
+</script>
+</body>
+</html>
