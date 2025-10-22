@@ -10,7 +10,7 @@
 
 <style>
 :root{--brand:#ee4d2d;--brand-2:#ff6b3d;--ink:#1f2937;--card:rgba(255,255,255,.92);--radius:20px;--shadow:0 18px 48px rgba(238,77,45,.25)}
-html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink)}
+html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);margin:0}
 h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0 3px 8px rgba(0,0,0,.25)}
 .card{background:var(--card);backdrop-filter:blur(8px);border-radius:var(--radius);border:1px solid rgba(255,255,255,.5);box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px}
 .badge-region{background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0}
@@ -136,7 +136,7 @@ const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
 let itens = [];
 let currentUser = null;
 let existingRow = null;
-let isLoggingOut = false; // <— flag pra evitar corrida no logout
+let isLoggingOut = false; // evita corrida no logout
 
 // --- utils
 const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
@@ -186,14 +186,14 @@ addButton.addEventListener("click", () => {
   cepInput.value = ""; regiaoInput.value = "";
 });
 
-// === LOGOUT (garantido, sem limpar storage global)
+// === LOGOUT (garantido)
 btnLogout.onclick = async () => {
   if (isLoggingOut) return;
   isLoggingOut = true;
-  const backToLogin = baseUrl() + "index.html";
+  const back = baseUrl() + "index.html";
   try { await supabase.auth.signOut(); } catch(_) {}
-  // usa replace para não permitir “voltar” ao cadastro
-  window.location.replace(backToLogin);
+  window.location.replace(back);
+  setTimeout(() => { if (document.visibilityState === "visible") window.location.href = back; }, 700);
 };
 
 // === REFRESH manual
@@ -201,7 +201,6 @@ btnRefresh.onclick = ()=> carregarDoOwner();
 
 // === SESSÃO / AUTH
 supabase.auth.onAuthStateChange(async (event, session)=>{
-  // se perdeu a sessão e não estamos no fluxo de logout, volta pro login
   if (!session?.user && !isLoggingOut) {
     window.location.replace(baseUrl() + "index.html");
     return;
@@ -273,11 +272,11 @@ form.addEventListener("submit", async (e) => {
   };
 
   try{
-    // UPSERT snapshot (chave: owner)
-    const { error: upErr } = await supabase.from("atualizar_bairros").upsert(payload, { onConflict: "owner" });
+    const { error: upErr } = await supabase
+      .from("atualizar_bairros")
+      .upsert(payload, { onConflict: "owner" });
     if (upErr) throw upErr;
 
-    // LOG histórico (sem travar a UI se falhar)
     try{
       await supabase.from("atualizar_bairros_log").insert({
         ...payload,
@@ -295,4 +294,3 @@ form.addEventListener("submit", async (e) => {
 </script>
 </body>
 </html>
-
