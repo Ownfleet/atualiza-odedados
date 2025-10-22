@@ -6,12 +6,22 @@
 <title>Entrar • OwnFleet</title>
 <style>
   :root { --brand:#ff5a2a; }
-  body { display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial;margin:0; }
-  .card { background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:480px;width:92%; }
-  h2 { margin:0 0 10px; }
-  .btn { background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer; }
-  .btn:hover { background:#ff6c43; }
-  .small { color:#777;margin-top:10px; }
+  body {
+    display:grid;place-items:center;min-height:100vh;
+    background:#f6f7fb;font-family:Poppins,system-ui,Arial;margin:0;
+  }
+  .card {
+    background:#fff;padding:36px;border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,.08);
+    text-align:center;max-width:480px;width:92%;
+  }
+  h2 { margin:0 0 10px;font-weight:800;color:#111; }
+  .btn {
+    background:var(--brand);color:#fff;border:0;border-radius:10px;
+    padding:12px 22px;font-weight:700;cursor:pointer;transition:.2s;
+  }
+  .btn:hover { background:#ff6c43;transform:translateY(-2px); }
+  .small { color:#555;margin-top:10px; }
   .err { color:#b00020;margin-top:10px;white-space:pre-wrap; }
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -21,41 +31,36 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
   const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  function baseUrl(){
-    const {origin,pathname}=location;
-    const dir=pathname.endsWith("/")?pathname:pathname.replace(/[^/]*$/,"");
-    return origin+dir;
-  }
-
   document.addEventListener("DOMContentLoaded", async()=>{
     const btn=document.getElementById("login-btn");
     const msg=document.getElementById("msg");
 
-    // Se já estiver logado
+    // 🔹 Verifica se o usuário já está logado
     const { data:{ user } } = await supa.auth.getUser();
     if(user){
       await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null });
-      location.href=baseUrl()+"cadastro.html"; return;
+      location.href="https://ownfleet.github.io/atualiza-odedados/cadastro.html";
+      return;
     }
 
-    // Ao clicar no botão
+    // 🔹 Clique no botão de login
     btn.onclick=async()=>{
       msg.textContent="Abrindo Google...";
       const { error }=await supa.auth.signInWithOAuth({
         provider:"google",
         options:{
-          redirectTo: baseUrl()+"cadastro.html", // redireciona direto pro cadastro
+          redirectTo:"https://ownfleet.github.io/atualiza-odedados/cadastro.html",
           queryParams:{ prompt:"select_account" }
         }
       });
       if(error){ msg.className="err"; msg.textContent="Erro: "+error.message; }
     };
 
-    // Listener de sessão
+    // 🔹 Se a sessão mudar (login concluído)
     supa.auth.onAuthStateChange(async(evt,session)=>{
       if(session?.user){
         await supa.from("usuarios_motoristas").upsert({ owner:session.user.id, email:session.user.email||null });
-        location.href=baseUrl()+"cadastro.html";
+        location.href="https://ownfleet.github.io/atualiza-odedados/cadastro.html";
       }
     });
   });
