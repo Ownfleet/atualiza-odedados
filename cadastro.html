@@ -9,11 +9,17 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
-:root{--brand:#ee4d2d;--brand-2:#ff6b3d;--ink:#1f2937;--card:rgba(255,255,255,.92);--radius:20px;--shadow:0 18px 48px rgba(238,77,45,.25)}
-html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink)}
+:root{
+  --brand:#ee4d2d; --brand-2:#ff6b3d; --ink:#1f2937;
+  --card:rgba(255,255,255,.92); --radius:20px; --shadow:0 18px 48px rgba(238,77,45,.25)
+}
+html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink)}
 h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0 3px 8px rgba(0,0,0,.25)}
-.card{background:var(--card);backdrop-filter:blur(8px);border-radius:var(--radius);border:1px solid rgba(255,255,255,.5);box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px}
-.badge-region{background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0}
+.card{background:var(--card);backdrop-filter:blur(8px);border-radius:var(--radius);
+  border:1px solid rgba(255,255,255,.5);box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px}
+.badge-region{background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;
+  display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0}
 .badge-region i{cursor:pointer}
 .sticky-submit{position:sticky;bottom:0;padding-top:.6rem;background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%)}
 .small-dim{font-size:.9rem;color:#6b7280}
@@ -26,7 +32,7 @@ h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="small-dim">Logado: <b id="whoami">-</b></div>
       <div class="d-flex gap-2">
-        <button id="refresh" class="btn btn-sm btn-outline-secondary"><i class="fa fa-rotate"></i></button>
+        <button id="refresh" class="btn btn-sm btn-outline-secondary" title="Recarregar"><i class="fa fa-rotate"></i></button>
         <button id="logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
       </div>
     </div>
@@ -103,15 +109,16 @@ h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// === SUPABASE DO SEU PROJETO ===
+/** ====== SEU SUPABASE ====== **/
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/** ============================ **/
 
 function baseUrl(){ const {origin,pathname}=location; const dir=pathname.endsWith("/")?pathname:pathname.replace(/[^/]*$/,""); return origin+dir; }
 
-// === ELEMENTOS ===
+// ELEMENTOS
 const whoami = document.getElementById("whoami");
 const btnLogout = document.getElementById("logout");
 const btnRefresh = document.getElementById("refresh");
@@ -128,16 +135,16 @@ const cepsConsolidados = document.getElementById("ceps-consolidados");
 const regioesConsolidadas = document.getElementById("regioes-consolidadas");
 const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
 
-// === ESTADO ===
+// ESTADO
 let itens = [];
 let currentUser = null;
 let existingRow = null;
 
-// --- utils
+// utils
 const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
 const arrToCsv   = (arr) => (arr || []).join(",");
 
-// === CEP -> BAIRRO (ViaCEP)
+// CEP -> bairro
 cepInput.addEventListener("input", () => {
   const cep = (cepInput.value || "").replace(/\D/g, "");
   if (cep.length === 8) {
@@ -145,12 +152,10 @@ cepInput.addEventListener("input", () => {
       .then(r => r.json())
       .then(d => regiaoInput.value = d?.bairro || "Não encontrado")
       .catch(() => regiaoInput.value = "Erro ao buscar");
-  } else {
-    regiaoInput.value = "";
-  }
+  } else regiaoInput.value = "";
 });
 
-// === LISTA REGIÕES
+// Lista regiões
 function renderLista(){
   lista.innerHTML = "";
   itens.forEach((it, i) => {
@@ -165,7 +170,7 @@ function updateHidden(){
   regioesConsolidadas.value = arrToCsv(itens.map(x => x.bairro));
   cidadesConsolidadas.value = arrToCsv(itens.map(x => x.cidade));
 }
-window.remover = (idx) => { itens.splice(idx,1); renderLista(); updateHidden(); };
+window.remover = (idx)=>{ itens.splice(idx,1); renderLista(); updateHidden(); };
 
 addButton.addEventListener("click", () => {
   const cep    = (cepInput.value || "").trim();
@@ -178,18 +183,23 @@ addButton.addEventListener("click", () => {
 
   itens.push({ cep, bairro, cidade });
   renderLista(); updateHidden();
-  cepInput.value = ""; regiaoInput.value = "";
+  cepInput.value=""; regiaoInput.value="";
 });
 
-// === SESSÃO
-btnLogout.onclick = async ()=>{ await supabase.auth.signOut(); location.href = baseUrl() + "index.html"; }
-btnRefresh.onclick = ()=> carregarDoOwner();
+// LOGOUT (corrigido: sempre redireciona)
+btnLogout.onclick = async () => {
+  try{ await supabase.auth.signOut(); }catch(_){}
+  location.href = baseUrl() + "index.html";
+};
 
+// REFRESH manual
+btnRefresh.onclick = ()=>carregarDoOwner();
+
+// Autenticação
 supabase.auth.onAuthStateChange(async (_evt, session)=>{
   currentUser = session?.user || null;
   if(!currentUser){ location.href = baseUrl() + "index.html"; return; }
   whoami.textContent = currentUser.email || currentUser.id;
-  try{ await supabase.from("usuarios_motoristas").upsert({ owner: currentUser.id, email: currentUser.email||null }); }catch(_){}
   await carregarDoOwner();
 });
 
@@ -201,33 +211,30 @@ supabase.auth.onAuthStateChange(async (_evt, session)=>{
   await carregarDoOwner();
 })();
 
-// === CARREGAR snapshot por owner
+// DB
 async function carregarDoOwner(){
   existingRow=null; itens=[]; renderLista(); updateHidden(); idInput.disabled=false;
   const { data, error } = await supabase.from("atualizar_bairros").select("*").eq("owner", currentUser.id).maybeSingle();
   if (!error && data){
     existingRow = data;
     idInput.value = data.driver_id || "";
-    idInput.disabled = true; // trava ID após 1º envio
+    idInput.disabled = true;
     nomeInput.value = data.nome || "";
     veiculoSelect.value = data.veiculo || "Moto";
 
-    const arrCeps = csvToArray(data.ceps);
-    const arrBairros = csvToArray(data.regioes);
-    const arrCidades = csvToArray(data.cidades);
-
-    const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
+    const cs = csvToArray(data.ceps), rs = csvToArray(data.regioes), ds = csvToArray(data.cidades);
+    const n = Math.max(cs.length, rs.length, ds.length);
     for (let i=0;i<n;i++){
-      const cep = (arrCeps[i]||"").trim();
-      const bairro = (arrBairros[i]||"").trim().toUpperCase();
-      const cidade = (arrCidades[i]||"").trim() || "Guarulhos";
+      const cep = (cs[i]||"").trim();
+      const bairro = (rs[i]||"").trim().toUpperCase();
+      const cidade = (ds[i]||"").trim() || "Guarulhos";
       if (cep && bairro) itens.push({ cep, bairro, cidade });
     }
     renderLista(); updateHidden();
   }
 }
 
-// === SUBMIT (UPSERT + LOG)
+// Submit
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
@@ -238,7 +245,7 @@ form.addEventListener("submit", async (e) => {
   const payload = {
     owner: currentUser.id,
     email: currentUser.email || null,
-    driver_id: existingRow ? existingRow.driver_id : driver_id,
+    driver_id: existingRow ? existingRow.driver_id : driver_id, // trava depois
     nome: (nomeInput.value || "").trim(),
     ceps: (cepsConsolidados.value || "").trim(),
     regioes: (regioesConsolidadas.value || "").trim(),
@@ -248,16 +255,12 @@ form.addEventListener("submit", async (e) => {
   };
 
   try{
-    // UPSERT snapshot (chave: owner)
     const { error: upErr } = await supabase.from("atualizar_bairros").upsert(payload, { onConflict: "owner" });
     if (upErr) throw upErr;
 
-    // LOG histórico
+    // log histórico (sem travar a UI se falhar)
     try{
-      await supabase.from("atualizar_bairros_log").insert({
-        ...payload,
-        created_at: payload.updated_at
-      });
+      await supabase.from("atualizar_bairros_log").insert({ ...payload, created_at: payload.updated_at });
     }catch(_){}
 
     alert("Dados salvos com sucesso!");
