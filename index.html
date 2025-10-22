@@ -15,7 +15,7 @@
   .small{color:#777;margin-top:10px}
   .err{color:#b00020;margin-top:10px;white-space:pre-wrap}
 </style>
-<!-- SDK UMD do Supabase (mais compatível em GitHub Pages) -->
+<!-- SDK UMD do Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer>
 (function(){
@@ -45,7 +45,7 @@
 
     const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Se já estiver logado, manda direto pro cadastro
+    // Se já estiver logado, manda para o cadastro
     try{
       const { data:{ user } } = await supa.auth.getUser();
       if (user){
@@ -55,7 +55,7 @@
       }
     }catch(_){}
 
-    // Ouve retorno do Google
+    // Listener do retorno do Google
     supa.auth.onAuthStateChange(async (_evt, session) => {
       if (session?.user){
         try{ await supa.from("usuarios_motoristas").upsert({ owner:session.user.id, email:session.user.email||null }); }catch(_){}
@@ -63,37 +63,23 @@
       }
     });
 
-    // Clique no botão com fallback (desktop)
+    // Clique do botão (fluxo simples, sem fallback)
     btn.addEventListener("click", async () => {
       try{
         btn.disabled = true;
         msg.textContent = "Abrindo Google…";
-
-        // 1) tenta abrir (pode abrir popup)
-        await supa.auth.signInWithOAuth({
+        const { error } = await supa.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: baseUrl() + "index.html" }
-        });
-
-        // 2) fallback se popup bloqueado (redireciono em página cheia)
-        setTimeout(async () => {
-          if (document.visibilityState === "visible") {
-            const { data, error } = await supa.auth.signInWithOAuth({
-              provider: "google",
-              options: {
-                redirectTo: baseUrl() + "index.html",
-                skipBrowserRedirect: true
-              }
-            });
-            if (data?.url) window.location.assign(data.url);
-            else if (error){
-              msg.className = "err";
-              msg.textContent = "Erro no OAuth: " + (error.message || error);
-              btn.disabled = false;
-            }
+          options: {
+            redirectTo: baseUrl() + "index.html",
+            // se quiser forçar a escolha de conta: queryParams: { prompt: "select_account" }
           }
-        }, 600);
-
+        });
+        if (error){
+          msg.className = "err";
+          msg.textContent = "Erro no OAuth: " + (error.message || error);
+          btn.disabled = false;
+        }
       }catch(e){
         msg.className = "err";
         msg.textContent = "Erro ao iniciar login: " + (e?.message || e);
