@@ -30,24 +30,49 @@ h2{
   border-radius:var(--radius); border:1px solid rgba(255,255,255,.5);
   box-shadow:var(--shadow); padding:24px; margin:auto; max-width:980px;
 }
-.badge-region{
-  background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;
-  display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0;
-}
+.badge-region{ background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;
+  display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0;}
 .badge-region i{ cursor:pointer; }
-.sticky-submit{
-  position:sticky;bottom:0;padding-top:.6rem;
-  background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%);
-}
+.sticky-submit{ position:sticky;bottom:0;padding-top:.6rem;
+  background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%); }
 .small-dim{ font-size:.9rem; color:#6b7280; }
+#auth-card{ max-width:520px }
 </style>
 </head>
 <body>
   <h2>Cadastro de Regiões • Shopee</h2>
 
-  <div id="main-card" class="card">
+  <!-- CARD DE AUTENTICAÇÃO -->
+  <div id="auth-card" class="card d-none">
+    <h5 class="mb-3"><i class="fa fa-lock"></i> Entrar</h5>
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label">E-mail</label>
+        <input type="email" id="email" class="form-control" placeholder="seu@email.com">
+      </div>
+      <div class="col-12">
+        <label class="form-label">Senha</label>
+        <input type="password" id="password" class="form-control" placeholder="••••••••">
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button id="btn-login" class="btn btn-primary"><i class="fa fa-right-to-bracket"></i> Entrar</button>
+        <button id="btn-signup" class="btn btn-outline-primary"><i class="fa fa-user-plus"></i> Criar conta</button>
+      </div>
+      <div class="col-12 small-dim">Dica: nas configurações do Supabase você pode desativar confirmação de e-mail para agilizar (Auth → Email).</div>
+    </div>
+  </div>
+
+  <!-- CARD PRINCIPAL -->
+  <div id="main-card" class="card d-none">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="small-dim">Logado como: <b id="whoami">...</b></div>
+      <button id="btn-logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
+    </div>
+    <hr>
+
     <div class="small-dim mb-2">
-      Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões que atende. Depois clique em <b>Enviar</b>.
+      Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões. Depois clique em <b>Enviar</b>.
+      <br><b>Observação:</b> após o primeiro cadastro, o <b>ID</b> fica travado.
     </div>
 
     <form id="form-regioes" autocomplete="off">
@@ -55,7 +80,7 @@ h2{
         <div class="col-md-4">
           <label class="form-label">ID</label>
           <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
-          <div class="small-dim mt-1">Ao digitar o ID e sair do campo, buscamos seus dados salvos (se houver).</div>
+          <div class="small-dim mt-1">O ID fica bloqueado após salvar pela primeira vez.</div>
         </div>
         <div class="col-md-8">
           <label class="form-label">Nome</label>
@@ -124,6 +149,15 @@ h2{
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // === ELEMENTOS ===
+    const authCard = document.getElementById("auth-card");
+    const mainCard = document.getElementById("main-card");
+    const whoami   = document.getElementById("whoami");
+    const emailEl  = document.getElementById("email");
+    const passEl   = document.getElementById("password");
+    document.getElementById("btn-login").onclick = login;
+    document.getElementById("btn-signup").onclick = signup;
+    document.getElementById("btn-logout").onclick = logout;
+
     const idInput       = document.getElementById("id");
     const nomeInput     = document.getElementById("nome");
     const cepInput      = document.getElementById("cep");
@@ -139,12 +173,13 @@ h2{
 
     // === ESTADO ===
     let itens = [];
+    let currentUser = null;
+    let existingRow = null; // registro já existente do usuário
 
-    // --- utils
     const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
     const arrToCsv   = (arr) => (arr || []).join(",");
 
-    // === CEP -> BAIRRO (ViaCEP)
+    // CEP -> bairro via ViaCEP
     cepInput.addEventListener("input", () => {
       const cep = (cepInput.value || "").replace(/\D/g, "");
       if (cep.length === 8) {
@@ -157,7 +192,6 @@ h2{
       }
     });
 
-    // === LISTA REGIÕES
     function renderLista(){
       lista.innerHTML = "";
       itens.forEach((it, i) => {
@@ -182,24 +216,58 @@ h2{
       if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
       if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
       if (itens.length >= 20) return alert("Máximo de 20 entradas.");
-
       itens.push({ cep, bairro, cidade });
       renderLista(); updateHidden();
       cepInput.value = ""; regiaoInput.value = "";
     });
 
-    // === CARREGAR cadastro ao informar ID
-    async function carregarCadastro(driverId){
-      if (!driverId) return;
+    // === AUTH FLOW
+    async function signup(){
+      const email = emailEl.value.trim(); const password = passEl.value.trim();
+      if (!email || !password) return alert("Informe e-mail e senha.");
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) return alert(error.message);
+      alert("Conta criada! Agora faça login.");
+    }
+    async function login(){
+      const email = emailEl.value.trim(); const password = passEl.value.trim();
+      if (!email || !password) return alert("Informe e-mail e senha.");
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return alert(error.message);
+    }
+    async function logout(){ await supabase.auth.signOut(); }
+
+    supabase.auth.onAuthStateChange(async (_evt, session) => {
+      currentUser = session?.user || null;
+      if (!currentUser){
+        authCard.classList.remove("d-none");
+        mainCard.classList.add("d-none");
+        return;
+      }
+      whoami.textContent = currentUser.email || currentUser.id;
+      authCard.classList.add("d-none");
+      mainCard.classList.remove("d-none");
+      await carregarDoProprioUsuario();
+    });
+
+    // === BUSCAR/POPULAR DADOS DO PRÓPRIO USUÁRIO
+    async function carregarDoProprioUsuario(){
+      existingRow = null;
+      itens = []; renderLista(); updateHidden();
+      idInput.disabled = false;
+
       const { data, error } = await supabase
         .from("atualizar_bairros")
         .select("*")
-        .eq("driver_id", driverId)
+        .eq("owner", currentUser.id)
         .maybeSingle();
 
       if (error) { console.warn(error); return; }
 
       if (data){
+        existingRow = data;
+        idInput.value   = data.driver_id || "";
+        idInput.disabled = true; // travar ID
         nomeInput.value = data.nome || "";
         veiculoSelect.value = data.veiculo || "Moto";
 
@@ -207,7 +275,6 @@ h2{
         const arrBairros = csvToArray(data.regioes);
         const arrCidades = csvToArray(data.cidades);
 
-        itens = [];
         const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
         for (let i=0;i<n;i++){
           const cep = (arrCeps[i]||"").trim();
@@ -217,32 +284,27 @@ h2{
         }
         renderLista(); updateHidden();
       } else {
-        // novo cadastro
-        itens = []; renderLista(); updateHidden();
+        // primeiro acesso: só nome/ID liberados
+        idInput.value = "";
         nomeInput.value = "";
         veiculoSelect.value = "Moto";
       }
     }
 
-    idInput.addEventListener("change", () => carregarCadastro(idInput.value.trim()));
-    idInput.addEventListener("blur",   () => carregarCadastro(idInput.value.trim()));
-
-    // se vier ?id= na URL, carrega automático
-    const url = new URL(location.href);
-    const qid = url.searchParams.get("id");
-    if (qid){ idInput.value = qid; carregarCadastro(qid); }
-
-    // === SUBMIT (UPSERT + LOG)
+    // === SUBMIT (sempre escreve com owner = auth.uid)
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!currentUser) return alert("Faça login primeiro.");
 
       if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
 
       const driver_id = (idInput.value || "").trim();
-      if (!driver_id) return alert("Informe seu ID.");
+      if (!existingRow && !driver_id) return alert("Informe seu ID (primeiro cadastro).");
+      if (existingRow && !idInput.disabled) idInput.disabled = true; // segurança extra
 
       const payload = {
-        driver_id,
+        owner: currentUser.id,
+        driver_id: existingRow ? existingRow.driver_id : driver_id,
         nome: (nomeInput.value || "").trim(),
         ceps: (cepsConsolidados.value || "").trim(),
         regioes: (regioesConsolidadas.value || "").trim(),
@@ -252,16 +314,17 @@ h2{
       };
 
       try{
-        // UPSERT snapshot
+        // UPSERT por owner (índice único)
         const { error: upErr } = await supabase
           .from("atualizar_bairros")
-          .upsert(payload, { onConflict: "driver_id" });
+          .upsert(payload, { onConflict: "owner" });
         if (upErr) throw upErr;
 
-        // LOG histórico
+        // LOG histórico com owner
         const { error: logErr } = await supabase
           .from("atualizar_bairros_log")
           .insert({
+            owner: currentUser.id,
             driver_id: payload.driver_id,
             nome: payload.nome,
             ceps: payload.ceps,
@@ -272,7 +335,8 @@ h2{
           });
         if (logErr) throw logErr;
 
-        alert("Dados enviados com sucesso!");
+        alert("Dados salvos!");
+        await carregarDoProprioUsuario(); // re-carrega para travar ID etc.
       }catch(err){
         console.error(err);
         alert("Erro ao salvar: " + (err?.message || err));
@@ -281,4 +345,3 @@ h2{
   </script>
 </body>
 </html>
-
