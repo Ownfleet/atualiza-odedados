@@ -10,7 +10,7 @@
 
 <style>
 :root{--brand:#ee4d2d;--brand-2:#ff6b3d;--ink:#1f2937;--card:rgba(255,255,255,.92);--radius:20px;--shadow:0 18px 48px rgba(238,77,45,.25)}
-html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);margin:0}
+html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink)}
 h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0 3px 8px rgba(0,0,0,.25)}
 .card{background:var(--card);backdrop-filter:blur(8px);border-radius:var(--radius);border:1px solid rgba(255,255,255,.5);box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px}
 .badge-region{background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0}
@@ -136,7 +136,6 @@ const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
 let itens = [];
 let currentUser = null;
 let existingRow = null;
-let isLoggingOut = false; // evita corrida no logout
 
 // --- utils
 const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
@@ -186,40 +185,24 @@ addButton.addEventListener("click", () => {
   cepInput.value = ""; regiaoInput.value = "";
 });
 
-// === LOGOUT (garantido)
-btnLogout.onclick = async () => {
-  if (isLoggingOut) return;
-  isLoggingOut = true;
-  const back = baseUrl() + "index.html";
-  try { await supabase.auth.signOut(); } catch(_) {}
-  window.location.replace(back);
-  setTimeout(() => { if (document.visibilityState === "visible") window.location.href = back; }, 700);
+// === SESSÃO
+btnLogout.onclick = async ()=>{ 
+  await supabase.auth.signOut(); 
+  location.href = baseUrl() + "index.html"; 
 };
-
-// === REFRESH manual
 btnRefresh.onclick = ()=> carregarDoOwner();
 
-// === SESSÃO / AUTH
-supabase.auth.onAuthStateChange(async (event, session)=>{
-  if (!session?.user && !isLoggingOut) {
-    window.location.replace(baseUrl() + "index.html");
-    return;
-  }
-  if (session?.user) {
-    currentUser = session.user;
-    whoami.textContent = currentUser.email || currentUser.id;
-    try {
-      await supabase.from("usuarios_motoristas")
-        .upsert({ owner: currentUser.id, email: currentUser.email||null });
-    } catch(_) {}
-    await carregarDoOwner();
-  }
+supabase.auth.onAuthStateChange(async (_evt, session)=>{
+  currentUser = session?.user || null;
+  if(!currentUser){ location.href = baseUrl() + "index.html"; return; }
+  whoami.textContent = currentUser.email || currentUser.id;
+  try{ await supabase.from("usuarios_motoristas").upsert({ owner: currentUser.id, email: currentUser.email||null }); }catch(_){}
+  await carregarDoOwner();
 });
 
-// boot inicial
 (async ()=>{
   const { data:{ user } } = await supabase.auth.getUser();
-  if(!user){ window.location.replace(baseUrl() + "index.html"); return; }
+  if(!user){ location.href = baseUrl() + "index.html"; return; }
   currentUser = user;
   whoami.textContent = user.email || user.id;
   await carregarDoOwner();
@@ -272,11 +255,13 @@ form.addEventListener("submit", async (e) => {
   };
 
   try{
+    // UPSERT snapshot (chave: owner)
     const { error: upErr } = await supabase
       .from("atualizar_bairros")
       .upsert(payload, { onConflict: "owner" });
     if (upErr) throw upErr;
 
+    // LOG histórico
     try{
       await supabase.from("atualizar_bairros_log").insert({
         ...payload,
