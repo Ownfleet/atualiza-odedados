@@ -45,7 +45,6 @@ h2{
 <body>
   <h2>Cadastro de Regiões • Shopee</h2>
 
-  <!-- CONTEÚDO PRINCIPAL (sem login) -->
   <div id="main-card" class="card">
     <div class="small-dim mb-2">
       Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões que atende. Depois clique em <b>Enviar</b>.
@@ -56,7 +55,7 @@ h2{
         <div class="col-md-4">
           <label class="form-label">ID</label>
           <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
-          <div class="small-dim mt-1">Ao digitar o ID, buscamos seus dados salvos (se houver).</div>
+          <div class="small-dim mt-1">Ao digitar o ID e sair do campo, buscamos seus dados salvos (se houver).</div>
         </div>
         <div class="col-md-8">
           <label class="form-label">Nome</label>
@@ -119,7 +118,7 @@ h2{
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // === CONFIG SUPABASE (sem autenticação) ===
+    // === CONFIG SUPABASE ===
     const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -141,7 +140,11 @@ h2{
     // === ESTADO ===
     let itens = [];
 
-    // === CEP -> BAIRRO (ViaCEP) ===
+    // --- utils
+    const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
+    const arrToCsv   = (arr) => (arr || []).join(",");
+
+    // === CEP -> BAIRRO (ViaCEP)
     cepInput.addEventListener("input", () => {
       const cep = (cepInput.value || "").replace(/\D/g, "");
       if (cep.length === 8) {
@@ -154,7 +157,7 @@ h2{
       }
     });
 
-    // === LISTA REGIÕES ===
+    // === LISTA REGIÕES
     function renderLista(){
       lista.innerHTML = "";
       itens.forEach((it, i) => {
@@ -165,9 +168,9 @@ h2{
       });
     }
     function updateHidden(){
-      cepsConsolidados.value    = itens.map(x => x.cep).join(",");
-      regioesConsolidadas.value = itens.map(x => x.bairro).join(",");
-      cidadesConsolidadas.value = itens.map(x => x.cidade).join(",");
+      cepsConsolidados.value    = arrToCsv(itens.map(x => x.cep));
+      regioesConsolidadas.value = arrToCsv(itens.map(x => x.bairro));
+      cidadesConsolidadas.value = arrToCsv(itens.map(x => x.cidade));
     }
     window.remover = (idx) => { itens.splice(idx,1); renderLista(); updateHidden(); };
 
@@ -185,10 +188,7 @@ h2{
       cepInput.value = ""; regiaoInput.value = "";
     });
 
-    // === UTIL ===
-    const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
-
-    // === CARREGAR cadastro ao informar ID ===
+    // === CARREGAR cadastro ao informar ID
     async function carregarCadastro(driverId){
       if (!driverId) return;
       const { data, error } = await supabase
@@ -196,6 +196,7 @@ h2{
         .select("*")
         .eq("driver_id", driverId)
         .maybeSingle();
+
       if (error) { console.warn(error); return; }
 
       if (data){
@@ -231,7 +232,7 @@ h2{
     const qid = url.searchParams.get("id");
     if (qid){ idInput.value = qid; carregarCadastro(qid); }
 
-    // === SUBMIT (UPSERT + LOG) ===
+    // === SUBMIT (UPSERT + LOG)
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
