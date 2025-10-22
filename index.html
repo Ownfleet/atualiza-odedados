@@ -6,15 +6,16 @@
 <title>Entrar • OwnFleet</title>
 <style>
   :root{--brand:#ff5a2a}
-  body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial}
-  .card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:440px}
+  body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial;margin:0}
+  .card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:480px;width:92%}
+  h2{margin:0 0 10px}
   .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer}
   .btn[disabled]{opacity:.6;cursor:not-allowed}
   .btn:hover{background:#ff6c43}
   .small{color:#777;margin-top:10px}
   .err{color:#b00020;margin-top:10px;white-space:pre-wrap}
 </style>
-<!-- UMD build (funciona sem modules) -->
+<!-- SDK UMD do Supabase (mais compatível em GitHub Pages) -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer>
 (function(){
@@ -35,64 +36,69 @@
   onReady(async function(){
     const btn = document.getElementById("login-btn");
     const msg = document.getElementById("msg");
-    const dbg = (t)=>{ console.log("[OwnFleet]", t); };
 
-    // garante que a lib carregou
     if (!window.supabase || !window.supabase.createClient){
       msg.className = "err";
-      msg.textContent = "Falha ao carregar SDK do Supabase. Verifique sua internet e tente novamente.";
+      msg.textContent = "Falha ao carregar o SDK do Supabase. Recarregue a página.";
       return;
     }
 
     const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    dbg("SUPABASE_URL="+SUPABASE_URL);
 
+    // Se já estiver logado, manda direto pro cadastro
+    try{
+      const { data:{ user } } = await supa.auth.getUser();
+      if (user){
+        try{ await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null }); }catch(_){}
+        location.href = baseUrl() + "cadastro.html";
+        return;
+      }
+    }catch(_){}
+
+    // Ouve retorno do Google
+    supa.auth.onAuthStateChange(async (_evt, session) => {
+      if (session?.user){
+        try{ await supa.from("usuarios_motoristas").upsert({ owner:session.user.id, email:session.user.email||null }); }catch(_){}
+        location.href = baseUrl() + "cadastro.html";
+      }
+    });
+
+    // Clique no botão com fallback (desktop)
     btn.addEventListener("click", async () => {
       try{
         btn.disabled = true;
         msg.textContent = "Abrindo Google…";
-        const { error } = await supa.auth.signInWithOAuth({
+
+        // 1) tenta abrir (pode abrir popup)
+        await supa.auth.signInWithOAuth({
           provider: "google",
-          options: {
-            redirectTo: baseUrl() + "index.html",
-            queryParams: { prompt: "select_account" }
-          }
+          options: { redirectTo: baseUrl() + "index.html" }
         });
-        if (error) {
-          msg.className = "err";
-          msg.textContent = "Erro no OAuth: " + (error.message || error);
-          btn.disabled = false;
-        }
+
+        // 2) fallback se popup bloqueado (redireciono em página cheia)
+        setTimeout(async () => {
+          if (document.visibilityState === "visible") {
+            const { data, error } = await supa.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: baseUrl() + "index.html",
+                skipBrowserRedirect: true
+              }
+            });
+            if (data?.url) window.location.assign(data.url);
+            else if (error){
+              msg.className = "err";
+              msg.textContent = "Erro no OAuth: " + (error.message || error);
+              btn.disabled = false;
+            }
+          }
+        }, 600);
+
       }catch(e){
         msg.className = "err";
-        msg.textContent = "Exceção ao iniciar login: " + (e?.message || e);
+        msg.textContent = "Erro ao iniciar login: " + (e?.message || e);
         btn.disabled = false;
       }
-    });
-
-    // já logado? redireciona
-    try{
-      const { data:{ user }, error } = await supa.auth.getUser();
-      if (error) dbg("getUser error: "+error.message);
-      if (user){
-        dbg("Já autenticado como "+(user.email||user.id));
-        try{
-          await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null });
-        }catch(_){}
-        location.href = baseUrl() + "cadastro.html";
-        return;
-      }
-    }catch(e){
-      dbg("Exceção getUser: "+(e?.message||e));
-    }
-
-    // listener caso volte do Google
-    supa.auth.onAuthStateChange(async (_evt, session) => {
-      if (!session?.user) return;
-      try{
-        await supa.from("usuarios_motoristas").upsert({ owner: session.user.id, email: session.user.email||null });
-      }catch(_){}
-      location.href = baseUrl() + "cadastro.html";
     });
   });
 })();
