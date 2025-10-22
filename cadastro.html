@@ -12,124 +12,84 @@
 :root {
   --brand:#ee4d2d;
   --brand-2:#ff6b3d;
-  --bg:#fff6f4;
-  --ink:#1f2937;
   --card:rgba(255,255,255,.95);
-  --shadow:0 18px 48px rgba(238,77,45,.25);
   --radius:22px;
+  --shadow:0 18px 48px rgba(238,77,45,.25);
 }
 body {
-  background: linear-gradient(145deg, var(--brand), var(--brand-2));
-  min-height: 100vh;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Poppins', system-ui, sans-serif;
-  overflow: hidden;
+  background:linear-gradient(145deg,var(--brand),var(--brand-2));
+  min-height:100vh;margin:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Poppins',system-ui,sans-serif;overflow:hidden;
 }
-.modal-dialog {
-  max-width: 420px;
-  width: 100%;
+.modal-dialog{max-width:420px;width:100%}
+.modal-content{
+  background:var(--card);
+  border-radius:var(--radius);
+  border:none;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(14px);
+  padding:1rem 1.5rem;
 }
-.modal-content {
-  background: var(--card);
-  border-radius: var(--radius);
-  border: none;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(14px);
-  padding: 1rem 1.5rem;
+.modal-header{border:none;flex-direction:column;align-items:center}
+.modal-title{
+  font-weight:800;font-size:1.4rem;
+  color:var(--brand);text-align:center;
 }
-.modal-header {
-  border: none;
-  flex-direction: column;
-  align-items: center;
+#avatarImg{
+  width:58px;height:58px;border-radius:50%;
+  object-fit:cover;margin-bottom:6px;
+  border:3px solid rgba(255,255,255,.6);
+  box-shadow:0 0 12px rgba(0,0,0,.15);
+  display:none;
 }
-.modal-title {
-  font-weight: 800;
-  font-size: 1.4rem;
-  color: var(--brand);
-  text-align: center;
+#whoami{color:#555;font-size:.9rem}
+label{font-weight:500}
+.btn-primary{background:var(--brand);border:none;transition:.3s}
+.btn-primary:hover{background:var(--brand-2);transform:scale(1.03)}
+.btn-success{background:#059669;border:none;transition:.3s}
+.btn-success:disabled{opacity:.8}
+.btn-success:hover:not(:disabled){transform:scale(1.02)}
+.badge-region{
+  display:inline-flex;align-items:center;gap:.5rem;
+  background:var(--brand);color:#fff;border-radius:999px;
+  padding:.5rem .9rem;font-weight:600;font-size:.85rem;
+  margin:.3rem .3rem 0 0;
 }
-#whoami {
-  color: #555;
-  font-size: .9rem;
+.badge-region i{cursor:pointer;opacity:.8}
+.badge-region i:hover{opacity:1}
+.toast{
+  position:fixed;bottom:20px;left:50%;
+  transform:translateX(-50%);
+  background:#16a34a;color:white;
+  padding:14px 24px;border-radius:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.2);
+  font-weight:500;display:none;
+  animation:fadein .3s ease-out;
 }
-label {
-  font-weight: 500;
+@keyframes fadein{
+  from{opacity:0;transform:translate(-50%,20px)}
+  to{opacity:1;transform:translate(-50%,0)}
 }
-.btn-primary {
-  background: var(--brand);
-  border: none;
-  transition: all .3s ease;
+.spinner{
+  width:18px;height:18px;
+  border:3px solid rgba(255,255,255,.4);
+  border-top-color:white;
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+  display:inline-block;vertical-align:middle;
 }
-.btn-primary:hover { background: var(--brand-2); transform: scale(1.03); }
-.btn-success {
-  background: #059669;
-  border: none;
-  transition: all .3s ease;
-}
-.btn-success:disabled {
-  opacity: 0.8;
-}
-.btn-success:hover:not(:disabled) { transform: scale(1.02); }
-.badge-region {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  background: var(--brand);
-  color: #fff;
-  border-radius: 999px;
-  padding: .5rem .9rem;
-  font-weight: 600;
-  font-size: .85rem;
-  margin: .3rem .3rem 0 0;
-}
-.badge-region i {
-  cursor: pointer;
-  opacity: .8;
-}
-.badge-region i:hover { opacity: 1; }
-
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #16a34a;
-  color: white;
-  padding: 14px 24px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  font-weight: 500;
-  display: none;
-  animation: fadein .3s ease-out;
-}
-@keyframes fadein {
-  from { opacity: 0; transform: translate(-50%, 20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-.spinner {
-  width: 18px; height: 18px;
-  border: 3px solid rgba(255,255,255,.4);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  display: inline-block;
-  vertical-align: middle;
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 
 <body>
 <!-- Modal Principal -->
-<div class="modal fade show" style="display:block; background:rgba(0,0,0,.4);">
+<div class="modal fade show" style="display:block;background:rgba(0,0,0,.4);">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
+        <img id="avatarImg" src="" alt="Avatar">
         <h5 class="modal-title"><i class="fa-solid fa-map-location-dot me-2"></i>Cadastro de Regiões</h5>
         <small id="whoami">Carregando...</small>
       </div>
@@ -151,6 +111,14 @@ label {
             <label>Região / Bairro</label>
             <input type="text" id="regiao" class="form-control" readonly placeholder="Preencha o CEP para buscar">
           </div>
+          <!-- Botão Adicionar Região -->
+          <div class="d-grid mb-3">
+            <button type="button" id="add-regiao" class="btn btn-primary">
+              <i class="fa fa-plus"></i> Adicionar Região
+            </button>
+          </div>
+          <div id="lista-regioes" class="mb-3"></div>
+
           <div class="mb-3">
             <label>Cidade</label>
             <select id="cidadeAtual" class="form-select">
@@ -168,22 +136,15 @@ label {
               <option>Van</option>
             </select>
           </div>
-          <div class="d-grid mb-3">
-            <button type="button" id="add-regiao" class="btn btn-primary">
-              <i class="fa fa-plus"></i> Adicionar Região
-            </button>
-          </div>
-          <div id="lista-regioes" class="mb-3"></div>
-          <input type="hidden" id="ceps-consolidados">
-          <input type="hidden" id="regioes-consolidadas">
-          <input type="hidden" id="cidades-consolidadas">
-          <div class="d-grid">
+          <div class="d-grid mt-4">
             <button type="submit" id="btnEnviar" class="btn btn-success">
               <i class="fa fa-paper-plane"></i> Enviar
             </button>
           </div>
           <div class="text-center mt-3">
-            <button id="logout" type="button" class="btn btn-sm btn-outline-danger px-3"><i class="fa fa-power-off"></i> Sair</button>
+            <button id="logout" type="button" class="btn btn-sm btn-outline-danger px-3">
+              <i class="fa fa-power-off"></i> Sair
+            </button>
           </div>
         </form>
       </div>
@@ -199,6 +160,7 @@ const supabase = createClient("https://bzbkqvxixxkcmfrhtcxq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE");
 
 const whoami = document.getElementById("whoami");
+const avatarImg = document.getElementById("avatarImg");
 const idInput = document.getElementById("id");
 const nomeInput = document.getElementById("nome");
 const cepInput = document.getElementById("cep");
@@ -211,9 +173,6 @@ const form = document.getElementById("form-regioes");
 const btnEnviar = document.getElementById("btnEnviar");
 const logout = document.getElementById("logout");
 const toast = document.getElementById("toast");
-const cepsConsolidados = document.getElementById("ceps-consolidados");
-const regioesConsolidadas = document.getElementById("regioes-consolidadas");
-const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
 
 let itens = [], user = null;
 
@@ -221,15 +180,15 @@ function showToast(msg, cor="#16a34a"){
   toast.textContent = msg;
   toast.style.background = cor;
   toast.style.display = "block";
-  setTimeout(()=>toast.style.display="none", 2500);
+  setTimeout(()=>toast.style.display="none",2500);
 }
 function setLoading(loading){
   if(loading){
-    btnEnviar.innerHTML = '<span class="spinner"></span> Enviando...';
-    btnEnviar.disabled = true;
-  } else {
-    btnEnviar.innerHTML = '<i class="fa fa-paper-plane"></i> Enviar';
-    btnEnviar.disabled = false;
+    btnEnviar.innerHTML='<span class="spinner"></span> Enviando...';
+    btnEnviar.disabled=true;
+  }else{
+    btnEnviar.innerHTML='<i class="fa fa-paper-plane"></i> Enviar';
+    btnEnviar.disabled=false;
   }
 }
 function render(){
@@ -240,18 +199,15 @@ function render(){
     s.innerHTML=`${x.bairro} (${x.cep} • ${x.cidade}) <i class="fa fa-times" onclick="remover(${i})"></i>`;
     lista.appendChild(s);
   });
-  cepsConsolidados.value = itens.map(x=>x.cep).join(",");
-  regioesConsolidadas.value = itens.map(x=>x.bairro).join(",");
-  cidadesConsolidadas.value = itens.map(x=>x.cidade).join(",");
 }
 window.remover=(i)=>{itens.splice(i,1);render();};
 
-// Busca CEP automático
+// Busca CEP
 cepInput.addEventListener("input",()=>{
   const cep=cepInput.value.replace(/\D/g,"");
   if(cep.length===8){
     fetch(`https://viacep.com.br/ws/${cep}/json/`).then(r=>r.json()).then(d=>{
-      regiaoInput.value = d.bairro || "Não encontrado";
+      regiaoInput.value=d.bairro||"Não encontrado";
     });
   }
 });
@@ -265,17 +221,26 @@ addButton.onclick=()=>{
   cepInput.value="";regiaoInput.value="";render();
 };
 
+// Avatar automático
+function setAvatarFromUser(u){
+  const url=u?.user_metadata?.avatar_url||u?.user_metadata?.picture||u?.identities?.[0]?.identity_data?.avatar_url||u?.identities?.[0]?.identity_data?.picture;
+  if(url){avatarImg.src=url;avatarImg.style.display="block";}
+}
+
 // Login check
 supabase.auth.onAuthStateChange(async(_,session)=>{
   if(!session?.user)return window.location.href="index.html";
   user=session.user;
   whoami.textContent=user.email;
+  setAvatarFromUser(user);
   carregar();
 });
 (async()=>{
   const {data:{user:u}}=await supabase.auth.getUser();
   if(!u)return window.location.href="index.html";
-  user=u;whoami.textContent=u.email;carregar();
+  user=u;whoami.textContent=u.email;
+  setAvatarFromUser(u);
+  carregar();
 })();
 
 async function carregar(){
@@ -283,20 +248,20 @@ async function carregar(){
   if(data){
     idInput.value=data.driver_id;idInput.disabled=true;
     nomeInput.value=data.nome;veiculoSelect.value=data.veiculo;
-    const ceps=(data.ceps||"").split(",");const regs=(data.regioes||"").split(",");const cids=(data.cidades||"").split(",");
+    const ceps=(data.ceps||"").split(","),regs=(data.regioes||"").split(","),cids=(data.cidades||"").split(",");
     itens=[];for(let i=0;i<ceps.length;i++)itens.push({cep:ceps[i],bairro:regs[i],cidade:cids[i]});
     render();
   }
 }
 
-// Enviar
+// Enviar (mínimo 4 CEPs)
 form.addEventListener("submit",async(e)=>{
   e.preventDefault();
-  if(!itens.length)return showToast("Adicione ao menos uma região","#dc2626");
+  if(itens.length<4)return showToast("Adicione pelo menos 4 regiões","#dc2626");
   setLoading(true);
   const payload={
     owner:user.id,email:user.email,driver_id:idInput.value.trim(),nome:nomeInput.value.trim(),
-    ceps:cepsConsolidados.value,regioes:regioesConsolidadas.value,cidades:cidadesConsolidadas.value,
+    ceps:itens.map(x=>x.cep).join(","),regioes:itens.map(x=>x.bairro).join(","),cidades:itens.map(x=>x.cidade).join(","),
     veiculo:veiculoSelect.value,updated_at:new Date().toISOString()
   };
   const {error}=await supabase.from("atualizar_bairros").upsert(payload,{onConflict:"owner"});
