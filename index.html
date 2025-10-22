@@ -131,7 +131,7 @@ h2{
           <small class="text-muted">Máximo de 20 entradas. Repetir <b>mesmo bairro</b> com <b>CEP diferente</b> é permitido.</small>
         </div>
 
-        <!-- hidden para envio -->
+        <!-- hidden -->
         <input type="hidden" id="regioes-consolidadas">
         <input type="hidden" id="ceps-consolidados">
         <input type="hidden" id="cidades-consolidadas">
@@ -145,7 +145,7 @@ h2{
     </form>
   </div>
 
-  <!-- Modal bloqueio ID -->
+  <!-- MODAL BLOQUEIO -->
   <div class="modal fade" id="modalAviso" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
       <div class="modal-header bg-warning">
@@ -162,48 +162,40 @@ h2{
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // === CONFIG SUPABASE ===
     const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
-    const APP_URL = "https://ownfleet.github.io/atualiza-odedados/"; // URL pública desta página
+    const APP_URL = "https://ownfleet.github.io/atualiza-odedados/";
+    const APP_PATH = "/atualiza-odedados/";
 
-    // Client sem PKCE local; vamos usar callback + setSession
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: false,
-      },
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
     });
 
-    // === ELEMENTOS ===
     const loginCard = document.getElementById("login-card");
     const mainCard  = document.getElementById("main-card");
     const loginBtn  = document.getElementById("login-google");
     const loginMsg  = document.getElementById("login-msg");
     const logoutBtn = document.getElementById("logout-btn");
-
-    const userEmail     = document.getElementById("user-email");
-    const driverStatus  = document.getElementById("driver-status");
-    const idInput       = document.getElementById("id");
-    const nomeInput     = document.getElementById("nome");
-    const cepInput      = document.getElementById("cep");
-    const regiaoInput   = document.getElementById("regiao");
-    const cidadeAtual   = document.getElementById("cidadeAtual");
+    const userEmail = document.getElementById("user-email");
+    const driverStatus = document.getElementById("driver-status");
+    const idInput = document.getElementById("id");
+    const nomeInput = document.getElementById("nome");
+    const cepInput = document.getElementById("cep");
+    const regiaoInput = document.getElementById("regiao");
+    const cidadeAtual = document.getElementById("cidadeAtual");
     const veiculoSelect = document.getElementById("veiculo");
-    const addButton     = document.getElementById("add-regiao");
-    const lista         = document.getElementById("lista-regioes");
-    const form          = document.getElementById("form-regioes");
-    const cepsConsolidados     = document.getElementById("ceps-consolidados");
-    const regioesConsolidadas  = document.getElementById("regioes-consolidadas");
-    const cidadesConsolidadas  = document.getElementById("cidades-consolidadas");
+    const addButton = document.getElementById("add-regiao");
+    const lista = document.getElementById("lista-regioes");
+    const form = document.getElementById("form-regioes");
+    const cepsConsolidados = document.getElementById("ceps-consolidados");
+    const regioesConsolidadas = document.getElementById("regioes-consolidadas");
+    const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
 
-    // === ESTADO ===
     let itens = [];
-    let user  = null;
+    let user = null;
     let currentDriver = null;
 
-    // === LOGIN (via callback do Supabase) ===
+    // === LOGIN ===
     loginBtn.addEventListener("click", async () => {
       loginMsg.textContent = "";
       const redirectThroughSupabase =
@@ -216,82 +208,62 @@ h2{
         },
       });
       if (error) {
-        console.error("[OAuth] erro ao abrir Google:", error);
+        console.error(error);
         loginMsg.textContent = "Erro ao abrir login do Google.";
       }
     });
 
-    // === CONSUME #access_token quando voltar do callback ===
+    // === FIX: redirecionamento da raiz para /atualiza-odedados/ ===
     async function setSessionFromHash() {
+      if (location.hash.includes("access_token") && location.pathname !== APP_PATH) {
+        location.replace(APP_URL + location.hash);
+        return;
+      }
+
       if (!location.hash.includes("access_token")) return;
 
       const params = new URLSearchParams(location.hash.substring(1));
-      const access_token  = params.get("access_token");
+      const access_token = params.get("access_token");
       const refresh_token = params.get("refresh_token");
 
       if (access_token && refresh_token) {
         try {
           loginMsg.textContent = "Finalizando login…";
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-          if (error) {
-            console.error("[OAuth] setSession falhou:", error);
-            loginMsg.textContent = "Falha ao finalizar login.";
-          } else {
-            loginMsg.textContent = "";
-          }
-        } catch (e) {
-          console.error("[OAuth] exception setSession:", e);
+          if (error) loginMsg.textContent = "Falha ao finalizar login.";
+        } catch {
           loginMsg.textContent = "Falha ao finalizar login.";
         }
       }
-      // limpa o hash
       history.replaceState(null, "", APP_URL);
     }
 
-    // === LOGOUT ===
     logoutBtn.addEventListener("click", async () => {
-      try { await supabase.auth.signOut(); } finally {
-        history.replaceState(null, "", APP_URL);
-        loginCard.style.display = "block";
-        mainCard.style.display  = "none";
-        loginMsg.textContent    = "";
-      }
+      await supabase.auth.signOut();
+      history.replaceState(null, "", APP_URL);
+      loginCard.style.display = "block";
+      mainCard.style.display = "none";
+      loginMsg.textContent = "";
     });
 
-    // === BOOT ===
-    async function boot(){
+    async function boot() {
       await setSessionFromHash();
-
       const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        loginCard.style.display = "block";
-        mainCard.style.display  = "none";
-        return;
-      }
+      if (!session) { loginCard.style.display = "block"; mainCard.style.display = "none"; return; }
 
       user = session.user;
-      userEmail.textContent = user.email || "";
-      loginCard.style.display = "none";
-      mainCard.style.display  = "block";
-
+      userEmail.textContent = user.email;
+      loginCard.style.display = "none"; mainCard.style.display = "block";
       await carregarOuCriarVinculo();
     }
 
-    supabase.auth.onAuthStateChange((_e,_s)=>boot());
+    supabase.auth.onAuthStateChange(() => boot());
 
-    // === VÍNCULO driver_id -> user ===
-    async function carregarOuCriarVinculo(){
+    async function carregarOuCriarVinculo() {
       const { data: u } = await supabase.auth.getUser();
-      const { data, error } = await supabase
-        .from("driver_accounts")
-        .select("driver_id,nome")
-        .eq("user_id", u.user.id)
-        .maybeSingle();
-
-      if (error) console.warn("[driver_accounts] erro:", error);
-
-      if (data?.driver_id){
+      const { data } = await supabase
+        .from("driver_accounts").select("driver_id,nome").eq("user_id", u.user.id).maybeSingle();
+      if (data?.driver_id) {
         currentDriver = data.driver_id;
         idInput.value = currentDriver;
         idInput.readOnly = true;
@@ -300,11 +272,9 @@ h2{
         await carregarCadastro(currentDriver);
       } else {
         driverStatus.textContent = "Sem ID vinculado. Informe seu ID e salve.";
-        idInput.readOnly = false;
       }
     }
 
-    // === CEP -> BAIRRO ===
     cepInput.addEventListener("input", () => {
       const cep = cepInput.value.replace(/\D/g, "");
       if (cep.length === 8) {
@@ -312,144 +282,70 @@ h2{
           .then(r => r.json())
           .then(d => regiaoInput.value = d?.bairro || "Não encontrado")
           .catch(() => regiaoInput.value = "Erro ao buscar");
-      } else {
-        regiaoInput.value = "";
-      }
+      } else regiaoInput.value = "";
     });
 
-    // === LISTA REGIÕES ===
-    function renderLista(){
+    function renderLista() {
       lista.innerHTML = "";
       itens.forEach((it, i) => {
         const s = document.createElement("span");
         s.className = "badge-region";
-        s.innerHTML = `${it.bairro} <small>(${it.cep})</small> <i class="fa fa-times" title="Remover" onclick="remover(${i})"></i>`;
+        s.innerHTML = `${it.bairro} <small>(${it.cep})</small> <i class="fa fa-times" onclick="remover(${i})"></i>`;
         lista.appendChild(s);
       });
     }
-    function updateHidden(){
-      cepsConsolidados.value    = itens.map(x => x.cep).join(",");
+    function updateHidden() {
+      cepsConsolidados.value = itens.map(x => x.cep).join(",");
       regioesConsolidadas.value = itens.map(x => x.bairro).join(",");
       cidadesConsolidadas.value = itens.map(x => x.cidade).join(",");
     }
-    window.remover = (idx) => { itens.splice(idx,1); renderLista(); updateHidden(); };
+    window.remover = idx => { itens.splice(idx,1); renderLista(); updateHidden(); };
 
     addButton.addEventListener("click", () => {
-      const cep    = (cepInput.value || "").trim();
-      const bairro = (regiaoInput.value || "").trim().toUpperCase();
-      const cidade = (cidadeAtual.value || "").trim();
-      if (!cep || cep.length !== 8) return alert("Digite um CEP válido (8 dígitos).");
-      if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
-      if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
-      if (itens.length >= 20) return alert("Máximo de 20 entradas.");
-
-      itens.push({ cep, bairro, cidade });
+      const cep = cepInput.value.trim();
+      const bairro = regiaoInput.value.trim().toUpperCase();
+      const cidade = cidadeAtual.value.trim();
+      if (!cep || cep.length !== 8) return alert("CEP inválido.");
+      if (!bairro) return alert("Busque o CEP primeiro.");
+      if (itens.some(x=>x.cep===cep && x.bairro===bairro)) return;
+      itens.push({ cep,bairro,cidade });
       renderLista(); updateHidden();
-      cepInput.value = ""; regiaoInput.value = "";
+      cepInput.value=""; regiaoInput.value="";
     });
 
-    // === CARREGAR SNAPSHOT ===
-    function csvToArray(csv){ return csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : []; }
-
-    async function carregarCadastro(driverId){
-      const { data, error } = await supabase
-        .from("atualizar_bairros")
-        .select("*")
-        .eq("driver_id", driverId)
-        .maybeSingle();
-      if (error) { console.warn("[atualizar_bairros]", error); return; }
-
-      if (data){
-        if (data.nome) nomeInput.value = data.nome;
-        if (data.veiculo) veiculoSelect.value = data.veiculo;
-
-        const arrCeps    = csvToArray(data.ceps);
-        const arrBairros = csvToArray(data.regioes);
-        const arrCidades = csvToArray(data.cidades);
-
-        itens = [];
-        const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
-        for (let i=0;i<n;i++){
-          const cep = (arrCeps[i]||"").trim();
-          const bairro = (arrBairros[i]||"").trim().toUpperCase();
-          const cidade = (arrCidades[i]||"").trim() || "Guarulhos";
-          if (cep && bairro) itens.push({ cep, bairro, cidade });
-        }
-        renderLista(); updateHidden();
-      } else {
-        itens = []; renderLista(); updateHidden();
-      }
+    async function carregarCadastro(driverId) {
+      const { data } = await supabase.from("atualizar_bairros").select("*").eq("driver_id",driverId).maybeSingle();
+      if (!data) return;
+      nomeInput.value = data.nome || "";
+      veiculoSelect.value = data.veiculo || "Moto";
+      const ceps = (data.ceps||"").split(",");
+      const bairros = (data.regioes||"").split(",");
+      const cidades = (data.cidades||"").split(",");
+      itens = ceps.map((c,i)=>({cep:c,bairro:bairros[i]||"",cidade:cidades[i]||"Guarulhos"}));
+      renderLista(); updateHidden();
     }
 
-    idInput.addEventListener("change", () => carregarCadastro(idInput.value.trim()));
-    idInput.addEventListener("blur",   () => carregarCadastro(idInput.value.trim()));
-
-    // === SUBMIT (UPSERT + LOG) ===
-    form.addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async e => {
       e.preventDefault();
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return alert("Faça login com Google primeiro.");
-
-      if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
-
-      const driver_id = currentDriver || (idInput.value || "").trim();
-
-      if (currentDriver && driver_id !== currentDriver){
-        bootstrap.Modal.getOrCreateInstance(document.getElementById("modalAviso")).show();
-        return;
-      }
-
+      if (!session) return alert("Faça login primeiro.");
+      if (itens.length < 1) return alert("Adicione pelo menos 1 bairro.");
+      const driver_id = currentDriver || idInput.value.trim();
       const payload = {
         driver_id,
-        nome: (nomeInput.value || "").trim(),
-        ceps: (cepsConsolidados.value || "").trim(),
-        regioes: (regioesConsolidadas.value || "").trim(),
-        cidades: (cidadesConsolidadas.value || "").trim(),
-        veiculo: (veiculoSelect.value || "").trim(),
-        updated_at: new Date().toISOString(),
+        nome:nomeInput.value.trim(),
+        ceps:cepsConsolidados.value,
+        regioes:regioesConsolidadas.value,
+        cidades:cidadesConsolidadas.value,
+        veiculo:veiculoSelect.value,
+        updated_at:new Date().toISOString(),
         user_id: (await supabase.auth.getUser()).data.user.id
       };
-
-      try{
-        // Primeiro vínculo (se não existir)
-        if (!currentDriver){
-          const { error: vErr } = await supabase
-            .from("driver_accounts")
-            .insert({ user_id: payload.user_id, driver_id, nome: payload.nome });
-          if (vErr) throw vErr;
-          currentDriver = driver_id;
-          idInput.readOnly = true;
-          driverStatus.textContent = "Vinculado ao seu login.";
-        }
-
-        // UPSERT snapshot
-        const { error: upErr } = await supabase
-          .from("atualizar_bairros")
-          .upsert(payload, { onConflict: "driver_id" });
-        if (upErr) throw upErr;
-
-        // LOG histórico
-        const { error: logErr } = await supabase
-          .from("atualizar_bairros_log")
-          .insert({
-            driver_id: payload.driver_id,
-            nome: payload.nome,
-            ceps: payload.ceps,
-            regioes: payload.regioes,
-            cidades: payload.cidades,
-            veiculo: payload.veiculo,
-            created_at: payload.updated_at
-          });
-        if (logErr) throw logErr;
-
-        alert("Dados enviados com sucesso!");
-      }catch(err){
-        console.error("[Salvar] erro:", err);
-        alert("Erro ao salvar: " + (err?.message || err));
-      }
+      await supabase.from("atualizar_bairros").upsert(payload,{onConflict:"driver_id"});
+      await supabase.from("atualizar_bairros_log").insert({...payload,created_at:payload.updated_at});
+      alert("Dados enviados com sucesso!");
     });
 
-    // start
     boot();
   </script>
 </body>
