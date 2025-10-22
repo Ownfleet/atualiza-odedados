@@ -10,13 +10,14 @@
 
 <style>
 :root{--brand:#ee4d2d;--brand-2:#ff6b3d;--ink:#1f2937;--card:rgba(255,255,255,.92);--radius:20px;--shadow:0 18px 48px rgba(238,77,45,.25)}
-html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink)}
+html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);margin:0}
 h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0 3px 8px rgba(0,0,0,.25)}
 .card{background:var(--card);backdrop-filter:blur(8px);border-radius:var(--radius);border:1px solid rgba(255,255,255,.5);box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px}
 .badge-region{background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0}
 .badge-region i{cursor:pointer}
 .sticky-submit{position:sticky;bottom:0;padding-top:.6rem;background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%)}
 .small-dim{font-size:.9rem;color:#6b7280}
+.err{color:#b00020;margin-top:8px;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -26,10 +27,11 @@ h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="small-dim">Logado: <b id="whoami">-</b></div>
       <div class="d-flex gap-2">
-        <button id="refresh" class="btn btn-sm btn-outline-secondary"><i class="fa fa-rotate"></i></button>
+        <button id="refresh" class="btn btn-sm btn-outline-secondary" title="Recarregar meus dados"><i class="fa fa-rotate"></i></button>
         <button id="logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
       </div>
     </div>
+    <div id="msg" class="err" style="display:none"></div>
     <hr>
 
     <div class="small-dim mb-2">
@@ -92,7 +94,7 @@ h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0
         <input type="hidden" id="cidades-consolidadas">
 
         <div class="col-12 sticky-submit">
-          <button type="submit" class="btn btn-success w-100">
+          <button type="submit" id="btn-enviar" class="btn btn-success w-100">
             <i class="fa fa-paper-plane"></i> Enviar
           </button>
         </div>
@@ -107,7 +109,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ⚙️ Opções que melhoram multi-aba e refresh de token
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  }
+});
 
 function baseUrl(){
   const {origin,pathname}=location;
@@ -131,15 +141,23 @@ const form = document.getElementById("form-regioes");
 const cepsConsolidados = document.getElementById("ceps-consolidados");
 const regioesConsolidadas = document.getElementById("regioes-consolidadas");
 const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
+const msg = document.getElementById("msg");
+const btnEnviar = document.getElementById("btn-enviar");
 
 // === ESTADO ===
 let itens = [];
 let currentUser = null;
 let existingRow = null;
+let isLoggingOut = false;
 
 // --- utils
 const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
 const arrToCsv   = (arr) => (arr || []).join(",");
+function setError(e){
+  msg.style.display = "block";
+  msg.textContent = typeof e === "string" ? e : (e?.message || JSON.stringify(e));
+}
+function clearError(){ msg.style.display="none"; msg.textContent=""; }
 
 // === CEP -> BAIRRO (ViaCEP)
 cepInput.addEventListener("input", () => {
@@ -185,34 +203,62 @@ addButton.addEventListener("click", () => {
   cepInput.value = ""; regiaoInput.value = "";
 });
 
-// === SESSÃO
-btnLogout.onclick = async ()=>{ 
-  await supabase.auth.signOut(); 
-  location.href = baseUrl() + "index.html"; 
+// === LOGOUT
+btnLogout.onclick = async () => {
+  if (isLoggingOut) return;
+  isLoggingOut = true;
+  try { await supabase.auth.signOut(); } catch(_) {}
+  window.location.replace(baseUrl() + "index.html");
 };
+
+// === REFRESH manual
 btnRefresh.onclick = ()=> carregarDoOwner();
 
-supabase.auth.onAuthStateChange(async (_evt, session)=>{
-  currentUser = session?.user || null;
-  if(!currentUser){ location.href = baseUrl() + "index.html"; return; }
-  whoami.textContent = currentUser.email || currentUser.id;
-  try{ await supabase.from("usuarios_motoristas").upsert({ owner: currentUser.id, email: currentUser.email||null }); }catch(_){}
-  await carregarDoOwner();
+// === SESSÃO / AUTH (ouvir mudanças — útil entre abas)
+supabase.auth.onAuthStateChange(async (event, session)=>{
+  if (!session?.user && !isLoggingOut) {
+    window.location.replace(baseUrl() + "index.html");
+    return;
+  }
+  if (session?.user) {
+    currentUser = session.user;
+    whoami.textContent = currentUser.email || currentUser.id;
+    try {
+      // mantém um registro simples do usuário
+      await supabase.from("usuarios_motoristas")
+        .upsert({ owner: currentUser.id, email: currentUser.email||null });
+    } catch(_) {}
+    await carregarDoOwner();
+  }
 });
 
+// boot inicial — funciona em multi-aba
 (async ()=>{
-  const { data:{ user } } = await supabase.auth.getUser();
-  if(!user){ location.href = baseUrl() + "index.html"; return; }
-  currentUser = user;
-  whoami.textContent = user.email || user.id;
-  await carregarDoOwner();
+  try{
+    const { data:{ session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      window.location.replace(baseUrl() + "index.html");
+      return;
+    }
+    currentUser = session.user;
+    whoami.textContent = currentUser.email || currentUser.id;
+    await carregarDoOwner();
+  }catch(e){
+    setError(e);
+  }
 })();
 
 // === CARREGAR snapshot por owner
 async function carregarDoOwner(){
+  clearError();
   existingRow=null; itens=[]; renderLista(); updateHidden(); idInput.disabled=false;
-  const { data, error } = await supabase.from("atualizar_bairros").select("*").eq("owner", currentUser.id).maybeSingle();
-  if (!error && data){
+  const { data, error } = await supabase
+    .from("atualizar_bairros")
+    .select("*")
+    .eq("owner", currentUser.id)
+    .maybeSingle();
+  if (error) { setError(error); return; }
+  if (data){
     existingRow = data;
     idInput.value = data.driver_id || "";
     idInput.disabled = true; // trava ID após 1º envio
@@ -234,18 +280,23 @@ async function carregarDoOwner(){
   }
 }
 
-// === SUBMIT (UPSERT + LOG)
+// === SUBMIT (UPSERT + LOG) — vincula ID ao email e owner
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+  clearError();
+
   if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
 
   const driver_id = (idInput.value || "").trim();
   if (!existingRow && !driver_id) return alert("Informe seu ID (primeiro cadastro).");
 
+  // trava botão para evitar duplo clique
+  btnEnviar.disabled = true;
+
   const payload = {
     owner: currentUser.id,
     email: currentUser.email || null,
-    driver_id: existingRow ? existingRow.driver_id : driver_id,
+    driver_id: existingRow ? existingRow.driver_id : driver_id, // trava o ID após o 1º envio
     nome: (nomeInput.value || "").trim(),
     ceps: (cepsConsolidados.value || "").trim(),
     regioes: (regioesConsolidadas.value || "").trim(),
@@ -255,25 +306,43 @@ form.addEventListener("submit", async (e) => {
   };
 
   try{
-    // UPSERT snapshot (chave: owner)
+    // 1) snapshot principal — chave por owner (precisa unique em owner)
     const { error: upErr } = await supabase
       .from("atualizar_bairros")
       .upsert(payload, { onConflict: "owner" });
     if (upErr) throw upErr;
 
-    // LOG histórico
+    // 2) log histórico (não bloqueia se falhar)
     try{
       await supabase.from("atualizar_bairros_log").insert({
         ...payload,
         created_at: payload.updated_at
       });
+    }catch(logErr){
+      console.warn("Falha ao gravar log:", logErr?.message || logErr);
+    }
+
+    // 3) opcional: manter tabela de usuários atualizada (email + owner)
+    try{
+      await supabase.from("usuarios_motoristas")
+        .upsert({ owner: currentUser.id, email: currentUser.email || null });
     }catch(_){}
 
     alert("Dados salvos com sucesso!");
     await carregarDoOwner();
   }catch(err){
     console.error(err);
-    alert("Erro ao salvar: " + (err?.message || err));
+    // Mostra mensagem clara de RLS/Unique, que são as causas comuns de “não acontece nada”
+    const emsg = err?.message || String(err);
+    if (/row-level security/i.test(emsg)) {
+      setError("Erro de permissão (RLS) ao salvar.\nVerifique as policies da tabela 'atualizar_bairros' para permitir INSERT/UPDATE quando owner = auth.uid().");
+    } else if (/no unique.*on conflict.*owner/i.test(emsg)) {
+      setError("Falta uma UNIQUE constraint na coluna 'owner' da tabela 'atualizar_bairros'.\nCrie a UNIQUE (ou ajuste onConflict).");
+    } else {
+      setError("Erro ao salvar: " + emsg);
+    }
+  } finally {
+    btnEnviar.disabled = false;
   }
 });
 </script>
