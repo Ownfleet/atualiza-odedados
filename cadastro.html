@@ -288,15 +288,16 @@ form.addEventListener("submit", async (e) => {
     const { error: upErr } = await supabase.from("atualizar_bairros").upsert(payload, { onConflict: "owner" });
     if (upErr) throw upErr;
 
-    await supabase.from("atualizar_bairros_log").insert({
+    const { error: logErr } = await supabase.from("atualizar_bairros_log").insert({
       ...payload, created_at: payload.updated_at
     });
+    if (logErr) throw logErr;
 
-    alert("Dados salvos com sucesso!");
+    alert("✅ Dados salvos com sucesso!");
     await carregarDoOwner();
   } catch (err) {
-    console.error("Erro ao salvar:", err);
-    alert("Erro ao salvar: " + (err.message || err));
+    console.error("❌ ERRO SUPABASE:", err);
+    alert("Erro ao salvar:\n\n" + (err?.message || JSON.stringify(err)));
   }
 });
 </script>
