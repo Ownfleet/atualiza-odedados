@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cadastro de Regiões • OwnFleet</title>
 
+<!-- Bootstrap e FontAwesome -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
@@ -48,7 +49,7 @@ h2{
 
 <div id="main-card" class="card">
   <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="small-dim">Logado: <b id="whoami">-</b></div>
+    <div class="small-dim">Logado: <b id="whoami">Verificando...</b></div>
     <div class="d-flex gap-2">
       <button id="refresh" class="btn btn-sm btn-outline-secondary"><i class="fa fa-rotate"></i></button>
       <button id="logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
@@ -122,7 +123,7 @@ h2{
       <input type="hidden" id="cidades-consolidadas">
 
       <div class="col-12 sticky-submit">
-        <button type="submit" class="btn btn-success w-100">
+        <button type="submit" class="btn btn-success w-100" id="btnEnviar">
           <i class="fa fa-paper-plane"></i> Enviar
         </button>
       </div>
@@ -130,7 +131,6 @@ h2{
   </form>
 </div>
 
-<!-- 🔹 SUPABASE -->
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -140,7 +140,7 @@ const SUPABASE_ANON_KEY =
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ELEMENTOS
+// === ELEMENTOS ===
 const whoami = document.getElementById("whoami");
 const btnLogout = document.getElementById("logout");
 const btnRefresh = document.getElementById("refresh");
@@ -156,23 +156,28 @@ const form = document.getElementById("form-regioes");
 const cepsConsolidados = document.getElementById("ceps-consolidados");
 const regioesConsolidadas = document.getElementById("regioes-consolidadas");
 const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
+const btnEnviar = document.getElementById("btnEnviar");
 
+// === ESTADO ===
 let itens = [];
 let currentUser = null;
 let existingRow = null;
+let isLoggingOut = false;
 
-// Busca CEP → Bairro
+// === CEP -> BAIRRO (ViaCEP)
 cepInput.addEventListener("input", () => {
   const cep = (cepInput.value || "").replace(/\D/g, "");
   if (cep.length === 8) {
     fetch(`https://viacep.com.br/ws/${cep}/json/`)
       .then(r => r.json())
-      .then(d => regiaoInput.value = d?.bairro?.toUpperCase() || "Não encontrado")
+      .then(d => regiaoInput.value = d?.bairro || "Não encontrado")
       .catch(() => regiaoInput.value = "Erro ao buscar");
-  } else regiaoInput.value = "";
+  } else {
+    regiaoInput.value = "";
+  }
 });
 
-// Renderiza lista de regiões
+// === LISTA REGIÕES ===
 function renderLista() {
   lista.innerHTML = "";
   itens.forEach((it, i) => {
@@ -189,7 +194,6 @@ function updateHidden() {
 }
 window.remover = (idx) => { itens.splice(idx, 1); renderLista(); updateHidden(); };
 
-// Adiciona região
 addButton.addEventListener("click", () => {
   const cep = cepInput.value.trim();
   const bairro = regiaoInput.value.trim().toUpperCase();
@@ -204,81 +208,105 @@ addButton.addEventListener("click", () => {
   cepInput.value = ""; regiaoInput.value = "";
 });
 
-// Logout
+// === LOGOUT
 btnLogout.onclick = async () => {
-  await supabase.auth.signOut();
+  if (isLoggingOut) return;
+  isLoggingOut = true;
+  try { await supabase.auth.signOut(); } catch (_) {}
   window.location.replace("index.html");
 };
 
-// Atualizar dados
+// === REFRESH manual
 btnRefresh.onclick = ()=> carregarDoOwner();
 
-// Sessão do usuário
+// === AUTH E CARREGAMENTO ===
+async function checarSessao() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    alert("Sessão expirada. Faça login novamente.");
+    return window.location.replace("index.html");
+  }
+  currentUser = session.user;
+  whoami.textContent = currentUser.email || currentUser.id;
+  return currentUser;
+}
+
 supabase.auth.onAuthStateChange(async (_evt, session) => {
-  if (!session?.user) window.location.replace("index.html");
-  else {
-    currentUser = session.user;
-    whoami.textContent = currentUser.email || currentUser.id;
-    await carregarDoOwner();
+  if (!session && !isLoggingOut) {
+    window.location.replace("index.html");
   }
 });
 
 (async () => {
-  const { data:{ user } } = await supabase.auth.getUser();
-  if(!user){ window.location.replace("index.html"); return; }
-  currentUser = user;
-  whoami.textContent = user.email || user.id;
+  await checarSessao();
   await carregarDoOwner();
 })();
 
-// Carregar dados do Supabase
+// === CARREGAR snapshot ===
 async function carregarDoOwner() {
   existingRow = null; itens = []; renderLista(); updateHidden(); idInput.disabled = false;
   const { data, error } = await supabase.from("atualizar_bairros").select("*").eq("owner", currentUser.id).maybeSingle();
-  if (data) {
+  if (!error && data) {
     existingRow = data;
     idInput.value = data.driver_id || "";
     idInput.disabled = true;
     nomeInput.value = data.nome || "";
     veiculoSelect.value = data.veiculo || "Moto";
-    const ceps = (data.ceps || "").split(",");
-    const regioes = (data.regioes || "").split(",");
-    const cidades = (data.cidades || "").split(",");
-    for (let i = 0; i < ceps.length; i++) {
+    const ceps = (data.ceps || "").split(",").filter(Boolean);
+    const regioes = (data.regioes || "").split(",").filter(Boolean);
+    const cidades = (data.cidades || "").split(",").filter(Boolean);
+    const n = Math.max(ceps.length, regioes.length, cidades.length);
+    for (let i = 0; i < n; i++) {
       if (ceps[i] && regioes[i]) itens.push({ cep: ceps[i], bairro: regioes[i], cidade: cidades[i] || "Guarulhos" });
     }
     renderLista(); updateHidden();
   }
 }
 
-// Envio
+// === SUBMIT ===
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (itens.length < 1) return alert("Adicione pelo menos 1 entrada.");
-  const driver_id = idInput.value.trim();
-  if (!driver_id) return alert("Informe seu ID.");
+  btnEnviar.disabled = true;
 
-  const payload = {
-    owner: currentUser.id,
-    email: currentUser.email,
-    driver_id,
-    nome: nomeInput.value.trim(),
-    ceps: cepsConsolidados.value,
-    regioes: regioesConsolidadas.value,
-    cidades: cidadesConsolidadas.value,
-    veiculo: veiculoSelect.value,
-    updated_at: new Date().toISOString()
-  };
+  try {
+    const user = await checarSessao();
+    if (!user) return;
 
-  const { error: upErr } = await supabase.from("atualizar_bairros").upsert(payload, { onConflict: "owner" });
-  if (upErr) return alert("Erro ao salvar principal:\n" + upErr.message);
+    if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
+    const driver_id = idInput.value.trim();
+    if (!driver_id) return alert("Informe seu ID.");
 
-  const { error: logErr } = await supabase.from("atualizar_bairros_log").insert({ ...payload, created_at: payload.updated_at });
-  if (logErr) return alert("Erro ao salvar log:\n" + logErr.message);
+    const payload = {
+      owner: user.id,
+      email: user.email || null,
+      driver_id,
+      nome: nomeInput.value.trim(),
+      ceps: cepsConsolidados.value,
+      regioes: regioesConsolidadas.value,
+      cidades: cidadesConsolidadas.value,
+      veiculo: veiculoSelect.value,
+      updated_at: new Date().toISOString()
+    };
 
-  alert("✅ Dados salvos com sucesso!");
-  await carregarDoOwner();
+    const { error: upErr } = await supabase.from("atualizar_bairros").upsert(payload, { onConflict: "owner" });
+    if (upErr) throw upErr;
+
+    const { error: logErr } = await supabase.from("atualizar_bairros_log").insert({
+      ...payload, created_at: payload.updated_at
+    });
+    if (logErr) throw logErr;
+
+    alert("✅ Dados salvos com sucesso!");
+    await carregarDoOwner();
+
+  } catch (err) {
+    console.error("❌ ERRO SUPABASE:", err);
+    alert("Erro ao salvar:\n\n" + (err?.message || JSON.stringify(err)));
+  } finally {
+    btnEnviar.disabled = false;
+  }
 });
 </script>
 </body>
 </html>
+
