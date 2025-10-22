@@ -5,54 +5,105 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Entrar • OwnFleet</title>
 <style>
-body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial}
-.card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:420px}
-.btn{background:#ff5a2a;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer}
-.btn:hover{background:#ff6c43}
-.small{color:#888;margin-top:10px}
+  :root{--brand:#ff5a2a}
+  body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial}
+  .card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:440px}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  .btn:hover{background:#ff6c43}
+  .small{color:#777;margin-top:10px}
+  .err{color:#b00020;margin-top:10px;white-space:pre-wrap}
 </style>
+<!-- UMD build (funciona sem modules) -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer>
+(function(){
+  const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
+
+  function baseUrl(){
+    const {origin,pathname}=location;
+    const dir = pathname.endsWith("/") ? pathname : pathname.replace(/[^/]*$/,"");
+    return origin + dir;
+  }
+
+  function onReady(fn){
+    if (document.readyState === "complete" || document.readyState === "interactive") fn();
+    else document.addEventListener("DOMContentLoaded", fn);
+  }
+
+  onReady(async function(){
+    const btn = document.getElementById("login-btn");
+    const msg = document.getElementById("msg");
+    const dbg = (t)=>{ console.log("[OwnFleet]", t); };
+
+    // garante que a lib carregou
+    if (!window.supabase || !window.supabase.createClient){
+      msg.className = "err";
+      msg.textContent = "Falha ao carregar SDK do Supabase. Verifique sua internet e tente novamente.";
+      return;
+    }
+
+    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    dbg("SUPABASE_URL="+SUPABASE_URL);
+
+    btn.addEventListener("click", async () => {
+      try{
+        btn.disabled = true;
+        msg.textContent = "Abrindo Google…";
+        const { error } = await supa.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: baseUrl() + "index.html",
+            queryParams: { prompt: "select_account" }
+          }
+        });
+        if (error) {
+          msg.className = "err";
+          msg.textContent = "Erro no OAuth: " + (error.message || error);
+          btn.disabled = false;
+        }
+      }catch(e){
+        msg.className = "err";
+        msg.textContent = "Exceção ao iniciar login: " + (e?.message || e);
+        btn.disabled = false;
+      }
+    });
+
+    // já logado? redireciona
+    try{
+      const { data:{ user }, error } = await supa.auth.getUser();
+      if (error) dbg("getUser error: "+error.message);
+      if (user){
+        dbg("Já autenticado como "+(user.email||user.id));
+        try{
+          await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null });
+        }catch(_){}
+        location.href = baseUrl() + "cadastro.html";
+        return;
+      }
+    }catch(e){
+      dbg("Exceção getUser: "+(e?.message||e));
+    }
+
+    // listener caso volte do Google
+    supa.auth.onAuthStateChange(async (_evt, session) => {
+      if (!session?.user) return;
+      try{
+        await supa.from("usuarios_motoristas").upsert({ owner: session.user.id, email: session.user.email||null });
+      }catch(_){}
+      location.href = baseUrl() + "cadastro.html";
+    });
+  });
+})();
+</script>
 </head>
 <body>
   <div class="card">
     <h2>Entrar com Google</h2>
-    <p class="small">Você será redirecionado para o Google.</p>
+    <p class="small">Você será redirecionado pelo Google e voltará para esta página.</p>
     <button id="login-btn" class="btn">Login com Google</button>
     <div id="msg" class="small"></div>
   </div>
-
-<script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
-const SUPABASE_ANON_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-function baseUrl(){
-  const {origin,pathname}=location;
-  const dir = pathname.endsWith("/") ? pathname : pathname.replace(/[^/]*$/,"");
-  return origin + dir;
-}
-
-document.getElementById("login-btn").onclick = async ()=>{
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: baseUrl() + "index.html",
-      queryParams: { prompt: "select_account" }
-    }
-  });
-  if (error) document.getElementById("msg").textContent = error.message;
-};
-
-supabase.auth.onAuthStateChange(async (_evt, session)=>{
-  const user = session?.user;
-  if (!user) return;
-  // mantém um registro leve do usuário
-  try{ await supabase.from("usuarios_motoristas").upsert({ owner: user.id, email: user.email||null }); }catch(_){}
-  // vai para o formulário
-  location.href = baseUrl() + "cadastro.html";
-});
-</script>
 </body>
 </html>
