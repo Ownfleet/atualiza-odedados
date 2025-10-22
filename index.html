@@ -5,17 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Entrar • OwnFleet</title>
 <style>
-body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial}
-.card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:420px}
-.btn{background:#ff5a2a;color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer}
-.btn:hover{background:#ff6c43}
-.small{color:#888;margin-top:10px}
+  :root{--brand:#ff5a2a}
+  body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial}
+  .card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:440px}
+  .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
+  .btn:hover{background:#ff6c43}
+  .small{color:#777;margin-top:10px}
 </style>
 </head>
 <body>
   <div class="card">
     <h2>Entrar com Google</h2>
-    <p class="small">Você será redirecionado para o Google.</p>
+    <p class="small">Você será redirecionado pelo Google e voltará para esta página.</p>
     <button id="login-btn" class="btn">Login com Google</button>
     <div id="msg" class="small"></div>
   </div>
@@ -23,10 +25,12 @@ body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-fa
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/** ====== SEU SUPABASE ====== **/
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/** ============================ **/
 
 function baseUrl(){
   const {origin,pathname}=location;
@@ -34,25 +38,35 @@ function baseUrl(){
   return origin + dir;
 }
 
-document.getElementById("login-btn").onclick = async ()=>{
+const btn = document.getElementById("login-btn");
+const msg = document.getElementById("msg");
+
+btn.addEventListener("click", async () => {
+  btn.disabled = true; msg.textContent = "Abrindo Google…";
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: baseUrl() + "index.html",
+      redirectTo: baseUrl() + "index.html", // volta aqui primeiro
       queryParams: { prompt: "select_account" }
     }
   });
-  if (error) document.getElementById("msg").textContent = error.message;
-};
+  if (error){ msg.textContent = error.message; btn.disabled=false; }
+});
 
-supabase.auth.onAuthStateChange(async (_evt, session)=>{
+// se já voltou autenticado, cria/atualiza o usuário e vai pro cadastro
+supabase.auth.onAuthStateChange(async (_evt, session) => {
   const user = session?.user;
   if (!user) return;
-  // mantém um registro leve do usuário
-  try{ await supabase.from("usuarios_motoristas").upsert({ owner: user.id, email: user.email||null }); }catch(_){}
-  // vai para o formulário
+  try{
+    await supabase.from("usuarios_motoristas")
+      .upsert({ owner: user.id, email: user.email || null });
+  }catch(_){}
   location.href = baseUrl() + "cadastro.html";
 });
+
+// também cobre o caso de já estar logado e abrir direto
+const { data:{ user } } = await supabase.auth.getUser();
+if (user) location.href = baseUrl() + "cadastro.html";
 </script>
 </body>
 </html>
