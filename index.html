@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Entrar • Google</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb}
+  .card{max-width:520px}
+</style>
+</head>
+<body>
+  <div class="card shadow p-4">
+    <h5 class="mb-2">Acessar com Google</h5>
+    <p class="text-muted mb-3">Você será redirecionado para o Google para entrar.</p>
+    <button id="btn" class="btn btn-dark w-100">Entrar com Google</button>
+    <div id="msg" class="small text-muted mt-3"></div>
+  </div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const btn = document.getElementById('btn');
+const msg = document.getElementById('msg');
+
+btn.onclick = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/login.html',
+      queryParams: { prompt: 'select_account' }
+    }
+  });
+  if (error) msg.textContent = error.message;
+};
+
+supabase.auth.onAuthStateChange(async (_evt, session) => {
+  const user = session?.user;
+  if (!user) return;
+
+  const email = user.email || null;
+  const owner = user.id;
+  try {
+    await supabase.from('usuarios_motoristas').upsert({ owner, email });
+  } catch(e) { console.log(e); }
+
+  window.location.href = window.location.origin + '/cadastro.html';
+});
+
+// Força login automático
+setTimeout(() => btn.click(), 200);
+</script>
+</body>
+</html>
