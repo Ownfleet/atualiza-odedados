@@ -24,49 +24,8 @@
   .small { color:#555;margin-top:10px; }
   .err { color:#b00020;margin-top:10px;white-space:pre-wrap; }
 </style>
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script defer>
-(async()=>{
-  const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
-  const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  document.addEventListener("DOMContentLoaded", async()=>{
-    const btn=document.getElementById("login-btn");
-    const msg=document.getElementById("msg");
-
-    // 🔹 Verifica se o usuário já está logado
-    const { data:{ user } } = await supa.auth.getUser();
-    if(user){
-      await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null });
-      location.href="https://ownfleet.github.io/atualiza-odedados/cadastro.html";
-      return;
-    }
-
-    // 🔹 Clique no botão de login
-    btn.onclick=async()=>{
-      msg.textContent="Abrindo Google...";
-      const { error }=await supa.auth.signInWithOAuth({
-        provider:"google",
-        options:{
-          redirectTo:"https://ownfleet.github.io/atualiza-odedados/cadastro.html",
-          queryParams:{ prompt:"select_account" }
-        }
-      });
-      if(error){ msg.className="err"; msg.textContent="Erro: "+error.message; }
-    };
-
-    // 🔹 Se a sessão mudar (login concluído)
-    supa.auth.onAuthStateChange(async(evt,session)=>{
-      if(session?.user){
-        await supa.from("usuarios_motoristas").upsert({ owner:session.user.id, email:session.user.email||null });
-        location.href="https://ownfleet.github.io/atualiza-odedados/cadastro.html";
-      }
-    });
-  });
-})();
-</script>
 </head>
+
 <body>
   <div class="card">
     <h2>Entrar com Google</h2>
@@ -74,5 +33,56 @@
     <button id="login-btn" class="btn">Login com Google</button>
     <div id="msg" class="small"></div>
   </div>
+
+<!-- 🔹 SDK via ESM (garante que o createClient existe) -->
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// DOM
+const btn = document.getElementById("login-btn");
+const msg = document.getElementById("msg");
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // 🔹 Verifica se já há sessão
+  const { data:{ user } } = await supabase.auth.getUser();
+  if(user){
+    await supabase.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null });
+    location.href="https://ownfleet.github.io/atualiza-odedados/cadastro.html";
+    return;
+  }
+
+  // 🔹 Clique no botão
+  btn.onclick = async () => {
+    msg.textContent = "Abrindo Google...";
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://ownfleet.github.io/atualiza-odedados/cadastro.html",
+        queryParams: { prompt: "select_account" }
+      }
+    });
+    if (error) {
+      msg.className = "err";
+      msg.textContent = "Erro: " + error.message;
+    }
+  };
+
+  // 🔹 Listener de sessão
+  supabase.auth.onAuthStateChange(async (_evt, session) => {
+    if (session?.user) {
+      await supabase.from("usuarios_motoristas").upsert({
+        owner: session.user.id,
+        email: session.user.email || null
+      });
+      location.href = "https://ownfleet.github.io/atualiza-odedados/cadastro.html";
+    }
+  });
+});
+</script>
 </body>
 </html>
