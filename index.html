@@ -1,89 +1,61 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Entrar • OwnFleet</title>
 <style>
-  :root{--brand:#ff5a2a}
-  body{display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial;margin:0}
-  .card{background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:480px;width:92%}
-  h2{margin:0 0 10px}
-  .btn{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer}
-  .btn[disabled]{opacity:.6;cursor:not-allowed}
-  .btn:hover{background:#ff6c43}
-  .small{color:#777;margin-top:10px}
-  .err{color:#b00020;margin-top:10px;white-space:pre-wrap}
+  :root { --brand:#ff5a2a; }
+  body { display:grid;place-items:center;min-height:100vh;background:#f6f7fb;font-family:Poppins,system-ui,Arial;margin:0; }
+  .card { background:#fff;padding:36px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;max-width:480px;width:92%; }
+  h2 { margin:0 0 10px; }
+  .btn { background:var(--brand);color:#fff;border:0;border-radius:10px;padding:12px 22px;font-weight:700;cursor:pointer; }
+  .btn:hover { background:#ff6c43; }
+  .small { color:#777;margin-top:10px; }
+  .err { color:#b00020;margin-top:10px;white-space:pre-wrap; }
 </style>
-<!-- SDK UMD do Supabase -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script defer>
-(function(){
+(async()=>{
   const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
+  const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   function baseUrl(){
     const {origin,pathname}=location;
-    const dir = pathname.endsWith("/") ? pathname : pathname.replace(/[^/]*$/,"");
-    return origin + dir;
+    const dir=pathname.endsWith("/")?pathname:pathname.replace(/[^/]*$/,"");
+    return origin+dir;
   }
 
-  function onReady(fn){
-    if (document.readyState === "complete" || document.readyState === "interactive") fn();
-    else document.addEventListener("DOMContentLoaded", fn);
-  }
+  document.addEventListener("DOMContentLoaded", async()=>{
+    const btn=document.getElementById("login-btn");
+    const msg=document.getElementById("msg");
 
-  onReady(async function(){
-    const btn = document.getElementById("login-btn");
-    const msg = document.getElementById("msg");
-
-    if (!window.supabase || !window.supabase.createClient){
-      msg.className = "err";
-      msg.textContent = "Falha ao carregar o SDK do Supabase. Recarregue a página.";
-      return;
+    // Se já estiver logado
+    const { data:{ user } } = await supa.auth.getUser();
+    if(user){
+      await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null });
+      location.href=baseUrl()+"cadastro.html"; return;
     }
 
-    const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Se já estiver logado, manda para o cadastro
-    try{
-      const { data:{ user } } = await supa.auth.getUser();
-      if (user){
-        try{ await supa.from("usuarios_motoristas").upsert({ owner:user.id, email:user.email||null }); }catch(_){}
-        location.href = baseUrl() + "cadastro.html";
-        return;
-      }
-    }catch(_){}
-
-    // Listener do retorno do Google
-    supa.auth.onAuthStateChange(async (_evt, session) => {
-      if (session?.user){
-        try{ await supa.from("usuarios_motoristas").upsert({ owner:session.user.id, email:session.user.email||null }); }catch(_){}
-        location.href = baseUrl() + "cadastro.html";
-      }
-    });
-
-    // Clique do botão (fluxo simples, sem fallback)
-    btn.addEventListener("click", async () => {
-      try{
-        btn.disabled = true;
-        msg.textContent = "Abrindo Google…";
-        const { error } = await supa.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: baseUrl() + "index.html",
-            // se quiser forçar a escolha de conta: queryParams: { prompt: "select_account" }
-          }
-        });
-        if (error){
-          msg.className = "err";
-          msg.textContent = "Erro no OAuth: " + (error.message || error);
-          btn.disabled = false;
+    // Ao clicar no botão
+    btn.onclick=async()=>{
+      msg.textContent="Abrindo Google...";
+      const { error }=await supa.auth.signInWithOAuth({
+        provider:"google",
+        options:{
+          redirectTo: baseUrl()+"cadastro.html", // redireciona direto pro cadastro
+          queryParams:{ prompt:"select_account" }
         }
-      }catch(e){
-        msg.className = "err";
-        msg.textContent = "Erro ao iniciar login: " + (e?.message || e);
-        btn.disabled = false;
+      });
+      if(error){ msg.className="err"; msg.textContent="Erro: "+error.message; }
+    };
+
+    // Listener de sessão
+    supa.auth.onAuthStateChange(async(evt,session)=>{
+      if(session?.user){
+        await supa.from("usuarios_motoristas").upsert({ owner:session.user.id, email:session.user.email||null });
+        location.href=baseUrl()+"cadastro.html";
       }
     });
   });
@@ -93,7 +65,7 @@
 <body>
   <div class="card">
     <h2>Entrar com Google</h2>
-    <p class="small">Você será redirecionado pelo Google e voltará para esta página.</p>
+    <p class="small">Você será redirecionado pelo Google e voltará para o cadastro.</p>
     <button id="login-btn" class="btn">Login com Google</button>
     <div id="msg" class="small"></div>
   </div>
