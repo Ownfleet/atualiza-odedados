@@ -94,7 +94,7 @@ tbody tr:hover{background:#fff9f7}
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL="https://bzbkqvxixxkcmfrhtcxq.supabase.co";
-const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
 const adminGate=document.getElementById("adminGate");
@@ -173,3 +173,4 @@ btnExport.onclick=()=>{
 </script>
 </body>
 </html>
+
