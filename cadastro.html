@@ -10,14 +10,13 @@
 
 <style>
 :root{--brand:#ee4d2d;--brand-2:#ff6b3d;--ink:#1f2937;--card:rgba(255,255,255,.92);--radius:20px;--shadow:0 18px 48px rgba(238,77,45,.25)}
-html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);margin:0}
+html,body{min-height:100%;background:linear-gradient(135deg,var(--brand),var(--brand-2));font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink)}
 h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0 3px 8px rgba(0,0,0,.25)}
 .card{background:var(--card);backdrop-filter:blur(8px);border-radius:var(--radius);border:1px solid rgba(255,255,255,.5);box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px}
 .badge-region{background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0}
 .badge-region i{cursor:pointer}
 .sticky-submit{position:sticky;bottom:0;padding-top:.6rem;background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%)}
 .small-dim{font-size:.9rem;color:#6b7280}
-.err{color:#b00020;margin-top:8px;white-space:pre-wrap}
 </style>
 </head>
 <body>
@@ -27,15 +26,18 @@ h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="small-dim">Logado: <b id="whoami">-</b></div>
       <div class="d-flex gap-2">
-        <button id="refresh" class="btn btn-sm btn-outline-secondary" title="Recarregar meus dados"><i class="fa fa-rotate"></i></button>
-        <button id="logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
+        <button id="refresh" class="btn btn-sm btn-outline-secondary" title="Recarregar meus dados">
+          <i class="fa fa-rotate"></i>
+        </button>
+        <button id="logout" class="btn btn-sm btn-outline-danger" title="Sair">
+          <i class="fa fa-power-off"></i> Sair
+        </button>
       </div>
     </div>
-    <div id="msg" class="err" style="display:none"></div>
     <hr>
 
     <div class="small-dim mb-2">
-      Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões que atende. Após o primeiro envio, o <b>ID</b> fica bloqueado.
+      Preencha seu <b>ID</b>, <b>Nome</b> e adicione os <b>CEPs</b> que atende. Após o primeiro envio, o <b>ID</b> fica bloqueado.
     </div>
 
     <form id="form-regioes" autocomplete="off">
@@ -55,46 +57,26 @@ h2{color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;text-shadow:0
           <input type="text" id="cep" class="form-control" maxlength="8" placeholder="Somente números">
         </div>
         <div class="col-md-4">
-          <label class="form-label">Região / Bairro</label>
+          <label class="form-label">Região / Bairro (opcional)</label>
           <input type="text" id="regiao" class="form-control" readonly placeholder="Preencha o CEP para buscar">
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Cidade</label>
-          <select id="cidadeAtual" class="form-select">
-            <option selected>Guarulhos</option>
-            <option>São Paulo</option>
-            <option>Mairiporã</option>
-            <option>Outros</option>
-          </select>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Veículo</label>
-          <select id="veiculo" class="form-select">
-            <option selected>Moto</option>
-            <option>Passeio</option>
-            <option>Fiorino</option>
-            <option>Van</option>
-          </select>
-        </div>
-        <div class="col-md-8 d-grid">
+        <div class="col-md-4 d-grid">
           <label class="form-label invisible">.</label>
           <button type="button" class="btn btn-primary" id="add-regiao">
-            <i class="fa fa-plus"></i> Adicionar Região (CEP + Bairro + Cidade)
+            <i class="fa fa-plus"></i> Adicionar CEP
           </button>
         </div>
 
         <div class="col-12">
           <div id="lista-regioes"></div>
-          <small class="small-dim">Máximo de 20 entradas. Repetir <b>mesmo bairro</b> com <b>CEP diferente</b> é permitido.</small>
+          <small class="small-dim">Máximo de 20 CEPS. Repetidos não entram.</small>
         </div>
 
-        <input type="hidden" id="regioes-consolidadas">
+        <!-- campos que realmente são enviados -->
         <input type="hidden" id="ceps-consolidados">
-        <input type="hidden" id="cidades-consolidadas">
 
         <div class="col-12 sticky-submit">
-          <button type="submit" id="btn-enviar" class="btn btn-success w-100">
+          <button type="submit" class="btn btn-success w-100">
             <i class="fa fa-paper-plane"></i> Enviar
           </button>
         </div>
@@ -109,15 +91,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
-
-// ⚙️ Opções que melhoram multi-aba e refresh de token
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  }
-});
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function baseUrl(){
   const {origin,pathname}=location;
@@ -133,33 +107,21 @@ const idInput = document.getElementById("id");
 const nomeInput = document.getElementById("nome");
 const cepInput = document.getElementById("cep");
 const regiaoInput = document.getElementById("regiao");
-const cidadeAtual = document.getElementById("cidadeAtual");
-const veiculoSelect = document.getElementById("veiculo");
 const addButton = document.getElementById("add-regiao");
 const lista = document.getElementById("lista-regioes");
 const form = document.getElementById("form-regioes");
 const cepsConsolidados = document.getElementById("ceps-consolidados");
-const regioesConsolidadas = document.getElementById("regioes-consolidadas");
-const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
-const msg = document.getElementById("msg");
-const btnEnviar = document.getElementById("btn-enviar");
 
 // === ESTADO ===
-let itens = [];
-let currentUser = null;
-let existingRow = null;
+let itens = [];         // só CEPs (string)
+let currentUser = null; // sessão
+let existingRow = null; // snapshot existente
 let isLoggingOut = false;
 
 // --- utils
-const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
 const arrToCsv   = (arr) => (arr || []).join(",");
-function setError(e){
-  msg.style.display = "block";
-  msg.textContent = typeof e === "string" ? e : (e?.message || JSON.stringify(e));
-}
-function clearError(){ msg.style.display="none"; msg.textContent=""; }
 
-// === CEP -> BAIRRO (ViaCEP)
+// === CEP -> BAIRRO (ViaCEP) apenas para mostrar ao usuário
 cepInput.addEventListener("input", () => {
   const cep = (cepInput.value || "").replace(/\D/g, "");
   if (cep.length === 8) {
@@ -172,33 +134,28 @@ cepInput.addEventListener("input", () => {
   }
 });
 
-// === LISTA REGIÕES
+// === LISTA CEPs
 function renderLista(){
   lista.innerHTML = "";
-  itens.forEach((it, i) => {
+  itens.forEach((cep, i) => {
     const s = document.createElement("span");
     s.className = "badge-region";
-    s.innerHTML = `${it.bairro} <small>(${it.cep})</small> <i class="fa fa-times" title="Remover" onclick="remover(${i})"></i>`;
+    s.innerHTML = `${cep} <i class="fa fa-times" title="Remover" onclick="remover(${i})"></i>`;
     lista.appendChild(s);
   });
 }
 function updateHidden(){
-  cepsConsolidados.value    = arrToCsv(itens.map(x => x.cep));
-  regioesConsolidadas.value = arrToCsv(itens.map(x => x.bairro));
-  cidadesConsolidadas.value = arrToCsv(itens.map(x => x.cidade));
+  cepsConsolidados.value = arrToCsv(itens);
 }
 window.remover = (idx) => { itens.splice(idx,1); renderLista(); updateHidden(); };
 
 addButton.addEventListener("click", () => {
-  const cep    = (cepInput.value || "").trim();
-  const bairro = (regiaoInput.value || "").trim().toUpperCase();
-  const cidade = (cidadeAtual.value || "").trim();
+  const cep = (cepInput.value || "").replace(/\D/g, "");
   if (!cep || cep.length !== 8) return alert("Digite um CEP válido (8 dígitos).");
-  if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
-  if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
-  if (itens.length >= 20) return alert("Máximo de 20 entradas.");
+  if (itens.includes(cep)) return;
+  if (itens.length >= 20) return alert("Máximo de 20 CEPS.");
 
-  itens.push({ cep, bairro, cidade });
+  itens.push(cep);
   renderLista(); updateHidden();
   cepInput.value = ""; regiaoInput.value = "";
 });
@@ -214,8 +171,8 @@ btnLogout.onclick = async () => {
 // === REFRESH manual
 btnRefresh.onclick = ()=> carregarDoOwner();
 
-// === SESSÃO / AUTH (ouvir mudanças — útil entre abas)
-supabase.auth.onAuthStateChange(async (event, session)=>{
+// === SESSÃO / AUTH
+supabase.auth.onAuthStateChange(async (_event, session)=>{
   if (!session?.user && !isLoggingOut) {
     window.location.replace(baseUrl() + "index.html");
     return;
@@ -223,126 +180,84 @@ supabase.auth.onAuthStateChange(async (event, session)=>{
   if (session?.user) {
     currentUser = session.user;
     whoami.textContent = currentUser.email || currentUser.id;
-    try {
-      // mantém um registro simples do usuário
-      await supabase.from("usuarios_motoristas")
-        .upsert({ owner: currentUser.id, email: currentUser.email||null });
-    } catch(_) {}
     await carregarDoOwner();
   }
 });
 
-// boot inicial — funciona em multi-aba
+// boot inicial
 (async ()=>{
-  try{
-    const { data:{ session } } = await supabase.auth.getSession();
-    if (!session?.user) {
-      window.location.replace(baseUrl() + "index.html");
-      return;
-    }
-    currentUser = session.user;
-    whoami.textContent = currentUser.email || currentUser.id;
-    await carregarDoOwner();
-  }catch(e){
-    setError(e);
-  }
+  const { data:{ user } } = await supabase.auth.getUser();
+  if(!user){ window.location.replace(baseUrl() + "index.html"); return; }
+  currentUser = user;
+  whoami.textContent = user.email || user.id;
+  await carregarDoOwner();
 })();
 
 // === CARREGAR snapshot por owner
 async function carregarDoOwner(){
-  clearError();
   existingRow=null; itens=[]; renderLista(); updateHidden(); idInput.disabled=false;
+
   const { data, error } = await supabase
     .from("atualizar_bairros")
     .select("*")
     .eq("owner", currentUser.id)
     .maybeSingle();
-  if (error) { setError(error); return; }
-  if (data){
+
+  if (!error && data){
     existingRow = data;
     idInput.value = data.driver_id || "";
-    idInput.disabled = true; // trava ID após 1º envio
+    idInput.disabled = true;                       // trava ID após 1º envio
     nomeInput.value = data.nome || "";
-    veiculoSelect.value = data.veiculo || "Moto";
-
-    const arrCeps = csvToArray(data.ceps);
-    const arrBairros = csvToArray(data.regioes);
-    const arrCidades = csvToArray(data.cidades);
-
-    const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
-    for (let i=0;i<n;i++){
-      const cep = (arrCeps[i]||"").trim();
-      const bairro = (arrBairros[i]||"").trim().toUpperCase();
-      const cidade = (arrCidades[i]||"").trim() || "Guarulhos";
-      if (cep && bairro) itens.push({ cep, bairro, cidade });
-    }
+    // carrega CEPS já salvos (CSV)
+    itens = (data.ceps || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
     renderLista(); updateHidden();
   }
 }
 
-// === SUBMIT (UPSERT + LOG) — vincula ID ao email e owner
+// === SUBMIT (UPSERT + LOG)
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  clearError();
+  if (itens.length < 1) return alert("Adicione pelo menos 1 CEP.");
 
-  if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
-
-  const driver_id = (idInput.value || "").trim();
-  if (!existingRow && !driver_id) return alert("Informe seu ID (primeiro cadastro).");
-
-  // trava botão para evitar duplo clique
-  btnEnviar.disabled = true;
+  const driverIdForm = (idInput.value || "").trim();
+  if (!existingRow && !driverIdForm) return alert("Informe seu ID (primeiro cadastro).");
 
   const payload = {
     owner: currentUser.id,
     email: currentUser.email || null,
-    driver_id: existingRow ? existingRow.driver_id : driver_id, // trava o ID após o 1º envio
+    driver_id: existingRow ? (existingRow.driver_id || null) : driverIdForm,
     nome: (nomeInput.value || "").trim(),
     ceps: (cepsConsolidados.value || "").trim(),
-    regioes: (regioesConsolidadas.value || "").trim(),
-    cidades: (cidadesConsolidadas.value || "").trim(),
-    veiculo: (veiculoSelect.value || "").trim(),
     updated_at: new Date().toISOString()
   };
 
   try{
-    // 1) snapshot principal — chave por owner (precisa unique em owner)
+    // Snapshot (1 linha por owner)
     const { error: upErr } = await supabase
       .from("atualizar_bairros")
       .upsert(payload, { onConflict: "owner" });
     if (upErr) throw upErr;
 
-    // 2) log histórico (não bloqueia se falhar)
+    // Log histórico (1 linha por envio)
     try{
       await supabase.from("atualizar_bairros_log").insert({
-        ...payload,
+        owner: payload.owner,
+        email: payload.email,
+        driver_id: payload.driver_id,
+        nome: payload.nome,
+        ceps: payload.ceps,
         created_at: payload.updated_at
       });
-    }catch(logErr){
-      console.warn("Falha ao gravar log:", logErr?.message || logErr);
-    }
-
-    // 3) opcional: manter tabela de usuários atualizada (email + owner)
-    try{
-      await supabase.from("usuarios_motoristas")
-        .upsert({ owner: currentUser.id, email: currentUser.email || null });
     }catch(_){}
 
     alert("Dados salvos com sucesso!");
     await carregarDoOwner();
   }catch(err){
     console.error(err);
-    // Mostra mensagem clara de RLS/Unique, que são as causas comuns de “não acontece nada”
-    const emsg = err?.message || String(err);
-    if (/row-level security/i.test(emsg)) {
-      setError("Erro de permissão (RLS) ao salvar.\nVerifique as policies da tabela 'atualizar_bairros' para permitir INSERT/UPDATE quando owner = auth.uid().");
-    } else if (/no unique.*on conflict.*owner/i.test(emsg)) {
-      setError("Falta uma UNIQUE constraint na coluna 'owner' da tabela 'atualizar_bairros'.\nCrie a UNIQUE (ou ajuste onConflict).");
-    } else {
-      setError("Erro ao salvar: " + emsg);
-    }
-  } finally {
-    btnEnviar.disabled = false;
+    alert("Erro ao salvar: " + (err?.message || err));
   }
 });
 </script>
