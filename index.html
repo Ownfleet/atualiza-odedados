@@ -162,10 +162,18 @@ h2{
   <script type="module">
     import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // === CONFIG SUPABASE ===
+    // === CONFIG SUPABASE (PKCE + detecção automática do ?code) ===
     const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        flowType: "pkce",
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true, // o SDK processa ?code= na carga da página
+      },
+    });
 
     // === ELEMENTOS ===
     const loginCard = document.getElementById("login-card");
@@ -194,16 +202,17 @@ h2{
     let user  = null;
     let currentDriver = null;
 
-    // === LOGIN GOOGLE ===
+    // === LOGIN GOOGLE (redirect PKCE) ===
     loginBtn.addEventListener("click", async () => {
-      const redirectTo = window.location.origin + window.location.pathname; // ex: https://ownfleet.github.io/atualiza-odedados/
       loginMsg.textContent = "";
+      // url exata desta página (precisa estar nos Redirect URLs)
+      const redirectTo = location.href.split("#")[0];
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo,
-          queryParams: { prompt: "select_account" } // força seleção de conta se necessário
-        }
+          queryParams: { prompt: "select_account" },
+        },
       });
       if (error) {
         console.error(error);
@@ -216,70 +225,15 @@ h2{
       try {
         await supabase.auth.signOut();
       } finally {
-        // limpa a URL e volta ao card de login
-        history.replaceState(null, "", window.location.pathname);
+        history.replaceState(null, "", location.pathname);
         loginCard.style.display = "block";
         mainCard.style.display  = "none";
         loginMsg.textContent    = "";
       }
     });
 
-    // === TRATA O RETORNO DO OAUTH (code ou #token) ===
-    async function handleOAuthReturn(){
-      const url = new URL(window.location.href);
-
-      // 1) Code flow (?code=...)
-      const code = url.searchParams.get('code');
-      if (code) {
-        try{
-          loginMsg.textContent = "Finalizando login…";
-          // *** CORREÇÃO: precisa passar { code } como objeto ***
-          const { data, error } = await supabase.auth.exchangeCodeForSession({ code });
-          if (error) {
-            console.error("exchangeCodeForSession error:", error);
-            loginMsg.textContent = "Erro de sessão: " + (error.message || error);
-          } else {
-            loginMsg.textContent = "";
-          }
-        }catch(e){
-          console.error("exchangeCodeForSession threw:", e);
-          loginMsg.textContent = "Falha ao trocar código por sessão.";
-        }finally{
-          url.searchParams.delete('code');
-          url.searchParams.delete('state');
-          history.replaceState(null, '', url.toString());
-        }
-        return;
-      }
-
-      // 2) Implicit flow (#access_token=...)
-      if (location.hash.includes('access_token')){
-        const params = new URLSearchParams(location.hash.substring(1));
-        const access_token  = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        if (access_token && refresh_token){
-          try{
-            loginMsg.textContent = "Finalizando login…";
-            const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-            if (error){
-              console.error("setSession error:", error);
-              loginMsg.textContent = "Falha ao definir sessão.";
-            } else {
-              loginMsg.textContent = "";
-            }
-          }catch(e){
-            console.error("setSession threw:", e);
-            loginMsg.textContent = "Falha ao definir sessão.";
-          }
-        }
-        history.replaceState(null, '', window.location.pathname);
-      }
-    }
-
-    // === BOOT ===
+    // === BOOT: checa sessão (o SDK já faz a troca do ?code) ===
     async function boot(){
-      await handleOAuthReturn();
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         loginCard.style.display = "block";
@@ -296,12 +250,18 @@ h2{
       await carregarOuCriarVinculo();
     }
 
+    // re-render quando a sessão mudar
+    supabase.auth.onAuthStateChange((_e,_s)=>boot());
+
     // === VÍNCULO driver_id -> user ===
     async function carregarOuCriarVinculo(){
+      // busca o vínculo do usuário logado
       const { data, error } = await supabase
         .from("driver_accounts")
         .select("driver_id,nome")
+        .eq("user_id", user.id)
         .maybeSingle();
+
       if (error) console.warn(error);
 
       if (data?.driver_id){
@@ -463,11 +423,8 @@ h2{
       }
     });
 
-    // reativa view após mudanças de sessão
-    supabase.auth.onAuthStateChange((_e,_s)=>boot());
-
     // start
-    await boot();
+    boot();
   </script>
 </body>
 </html>
