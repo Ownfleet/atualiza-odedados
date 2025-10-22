@@ -1,133 +1,69 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
+<meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Painel • OwnFleet</title>
 
-<!-- Icons -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
 :root{
-  --brand:#ee4d2d;
-  --brand2:#ff6b3d;
-  --ink:#0f172a;
-  --muted:#6b7280;
-  --card:rgba(255,255,255,.92);
-  --glass:rgba(255,255,255,.65);
-  --radius:18px;
-  --shadow:0 20px 50px rgba(238,77,45,.22);
+  --brand:#ee4d2d; --brand2:#ff6b3d; --ink:#0f172a;
+  --card:rgba(255,255,255,.94); --radius:18px; --shadow:0 20px 50px rgba(238,77,45,.22);
 }
-
 *{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family:Poppins,system-ui,Arial,Segoe UI,Roboto;
-  color:var(--ink);
+body{margin:0;font-family:Poppins,system-ui,Arial;color:var(--ink);
   background:
     radial-gradient(1200px 600px at 85% -10%, #ffd5cc 0, transparent 60%),
     radial-gradient(1200px 600px at -10% 90%, #ffc6b7 0, transparent 55%),
     linear-gradient(135deg,var(--brand),var(--brand2));
+  min-height:100vh;
 }
-
-/* Layout */
 .container{max-width:1160px;margin:34px auto;padding:0 18px}
-.card{
-  background:var(--card);
-  border:1px solid rgba(255,255,255,.7);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  backdrop-filter: blur(10px);
-  overflow: hidden;
-}
-
-/* Header */
-.header{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:14px;padding:18px 18px 8px 18px
-}
-.brand{display:flex;align-items:center;gap:12px}
-.logo{
-  width:48px;height:48px;border-radius:14px;
-  background:linear-gradient(145deg,#fff,#fff7f5);
-  display:grid;place-items:center;
-  box-shadow:0 10px 30px rgba(238,77,45,.25)
-}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.header{display:flex;align-items:center;justify-content:space-between;padding:18px;gap:12px}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(145deg,#fff,#fff7f5);display:grid;place-items:center;box-shadow:0 10px 30px rgba(238,77,45,.25)}
 .logo i{color:var(--brand);font-size:22px}
-.title{line-height:1}
-.title h1{
-  margin:0;font-weight:900;font-size:1.35rem;color:var(--brand)
-}
-.subtitle{margin:2px 0 0 0;color:#475569;font-size:.9rem}
+.title h1{margin:0;font-size:1.35rem;color:var(--brand);font-weight:900}
+.subtitle{margin:2px 0 0;color:#475569;font-size:.9rem}
 
-/* Controls */
-.toolbar{padding:0 18px 16px 18px}
-textarea{
-  width:100%;min-height:50px;resize:vertical;
-  padding:12px 14px;border-radius:12px;border:1px solid #e5e7eb;
-  background:#fff;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,.03)
-}
-.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.btn{
-  border:0;border-radius:12px;padding:10px 14px;font-weight:800;
-  color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:.55rem;
-  transition:.15s transform, .15s filter
-}
-.btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
-.btn:disabled{opacity:.65;cursor:not-allowed}
+/* toolbar */
+.toolbar{padding:0 18px 18px 18px}
+textarea{width:100%;min-height:56px;padding:12px 14px;border-radius:12px;border:1px solid #e6e6e6;resize:vertical}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center}
+.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:.6rem}
 .btn-primary{background:var(--brand)}
 .btn-green{background:#10b981}
 .btn-blue{background:#0ea5e9}
 .btn-gray{background:#6b7280}
-.counter{margin-left:auto;color:#475569;font-weight:600}
+.btn:disabled{opacity:.6;cursor:not-allowed}
 
-/* Table */
-.table-wrap{overflow:auto;border-top:1px solid #f1f5f9}
+/* table */
+.table-wrap{overflow:auto;border-top:1px solid #f3f4f6}
 table{width:100%;border-collapse:collapse;background:#fff}
-thead th{
-  position:sticky;top:0;z-index:2;
-  background:#fff7f5;color:#1f2937;border-bottom:1px solid #f1f5f9;
-  text-align:left;padding:12px 14px;font-size:.9rem
-}
-tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.96rem}
+thead th{position:sticky;top:0;background:#fff7f5;padding:12px 14px;text-align:left;border-bottom:1px solid #f1f5f9}
+tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.95rem}
 tbody tr:hover{background:#fffaf8}
-.empty{
-  text-align:center;color:#64748b;padding:32px 12px;background:#fff
-}
+.empty{padding:28px;text-align:center;color:#64748b}
 
-/* Modal gate */
-.backdrop{
-  position:fixed;inset:0;display:grid;place-items:center;
-  background:rgba(0,0,0,.45);z-index:40
-}
-.modal{
-  width:min(94vw,420px);background:#fff;border-radius:18px;padding:20px;
-  box-shadow:0 26px 60px rgba(0,0,0,.25)
-}
-.modal h2{margin:0 0 6px 0;font-size:1.25rem}
-.modal p{margin:0 0 14px 0;color:#475569}
-.input{
-  width:100%;padding:12px 14px;border-radius:12px;border:1px solid #e5e7eb;background:#fff
-}
-.msg{margin-top:8px;font-size:.9rem;color:#b00020}
+/* modal */
+.backdrop{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);z-index:100}
+.modal{width:min(94vw,420px);background:#fff;border-radius:16px;padding:18px;box-shadow:0 26px 60px rgba(0,0,0,.25)}
+.modal h2{margin:0 0 6px;font-size:1.2rem}
+.modal p{margin:0 0 12px;color:#475569}
+.input{width:100%;padding:12px;border-radius:10px;border:1px solid #e6e6e6}
+.msg{margin-top:8px;color:#b00020;font-size:.95rem}
 
-/* Chips */
-.kbd{background:#eef2ff;border:1px solid #e5e7eb;padding:2px 6px;border-radius:6px;font-size:.8rem;color:#334155}
+/* small */
+.kbd{background:#eef2ff;border-radius:6px;padding:4px 8px;font-weight:700;color:#0f172a;font-size:.82rem}
 
-/* Toast */
-.toast{
-  position:fixed;right:14px;bottom:14px;z-index:50;
-  background:var(--glass);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.8);
-  border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);display:none
-}
-.toast.show{display:block;animation:pop .15s ease-out}
-@keyframes pop{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
-
+/* toast */
+.toast{position:fixed;right:18px;bottom:18px;background:rgba(255,255,255,.96);padding:10px 14px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
+.toast.show{display:block}
 @media (max-width:640px){
-  .header{flex-direction:column;align-items:flex-start}
-  .counter{margin-left:0}
+  .header{flex-direction:column;align-items:flex-start;gap:8px}
 }
 </style>
 </head>
@@ -135,7 +71,6 @@ tbody tr:hover{background:#fffaf8}
 
 <div class="container">
   <div class="card">
-    <!-- header -->
     <div class="header">
       <div class="brand">
         <div class="logo"><i class="fa-solid fa-map-location-dot"></i></div>
@@ -145,23 +80,22 @@ tbody tr:hover{background:#fffaf8}
         </div>
       </div>
 
-      <div class="controls" style="margin-top:0">
+      <div style="display:flex;gap:10px;align-items:center">
         <button id="btnLoadAll" class="btn btn-primary"><i class="fa-solid fa-database"></i> Carregar</button>
-        <button id="btnExport"  class="btn btn-green"><i class="fa-solid fa-file-export"></i> Exportar</button>
+        <button id="btnExport" class="btn btn-green"><i class="fa-solid fa-file-export"></i> Exportar</button>
       </div>
     </div>
 
-    <!-- toolbar -->
     <div class="toolbar">
-      <textarea id="idsBulk" placeholder="IDs separados por vírgula, espaço ou quebra de linha…"></textarea>
+      <textarea id="idsBulk" placeholder="IDs separados por vírgula, espaço ou quebra de linha — use para exportar/exibir apenas esses IDs quando quiser."></textarea>
+
       <div class="controls">
         <button id="btnSearch" class="btn btn-blue"><i class="fa-solid fa-search"></i> Buscar</button>
-        <button id="btnClear"  class="btn btn-gray"><i class="fa-solid fa-eraser"></i> Limpar</button>
-        <span class="counter"><span class="kbd">Total:</span> <span id="count">0</span></span>
+        <button id="btnClear" class="btn btn-gray"><i class="fa-solid fa-eraser"></i> Limpar</button>
+        <div style="margin-left:auto;color:#475569;font-weight:700">Total: <span id="count">0</span></div>
       </div>
     </div>
 
-    <!-- table -->
     <div class="table-wrap">
       <table id="table">
         <thead>
@@ -175,39 +109,38 @@ tbody tr:hover{background:#fffaf8}
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr class="empty"><td colspan="6">Sem dados. Use <b>Carregar</b> ou busque por IDs.</td></tr>
+          <tr class="empty"><td colspan="6">Sem dados. Insira a senha para liberar o painel.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- Gate (senha admin) -->
+<!-- admin gate -->
 <div class="backdrop" id="gate">
   <div class="modal">
     <h2><i class="fa-solid fa-lock"></i> Acesso Administrativo</h2>
-    <p>Para abrir o painel digite a senha de administrador.</p>
+    <p>Digite a senha para visualizar o painel completo.</p>
     <input id="adminPass" type="password" class="input" placeholder="Senha admin" />
-    <div class="controls" style="margin-top:12px">
+    <div style="display:flex;gap:8px;margin-top:12px">
       <button id="btnEnter" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
     </div>
     <div id="gateMsg" class="msg"></div>
-    <p class="subtitle" style="margin-top:10px">Dica: a senha é validada por <span class="kbd">SHA-256</span> no banco.</p>
+    <p style="margin-top:12px;color:#475569;font-size:.88rem">A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.</p>
   </div>
 </div>
 
-<!-- Toast -->
-<div id="toast" class="toast"><i class="fa-solid fa-circle-check" style="color:#16a34a"></i> <span id="toastMsg">Pronto</span></div>
+<div id="toast" class="toast"><i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:8px"></i><span id="toastMsg">OK</span></div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/* ============ Supabase ============ */
+/* === CONFIG SUPABASE === */
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ============ Elements ============ */
+/* === ELEMENTS === */
 const tbody     = document.getElementById("tbody");
 const countEl   = document.getElementById("count");
 const idsBulk   = document.getElementById("idsBulk");
@@ -224,23 +157,18 @@ const gateMsg   = document.getElementById("gateMsg");
 const toast     = document.getElementById("toast");
 const toastMsg  = document.getElementById("toastMsg");
 
-/* ============ State ============ */
 let allRows = [];
 
-/* ============ Utils ============ */
-function showToast(msg){
-  toastMsg.textContent = msg;
+/* === UTIL === */
+function showToast(txt){
+  toastMsg.textContent = txt;
   toast.classList.add("show");
-  setTimeout(()=> toast.classList.remove("show"), 1600);
+  setTimeout(()=> toast.classList.remove("show"), 1400);
 }
-
-function setLoading(btn, is){
-  const original = btn.dataset.label || btn.textContent;
-  if(!btn.dataset.label) btn.dataset.label = original;
-  btn.disabled = !!is;
-  btn.innerHTML = is ? `<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…` : original;
+function setLoading(btn, on){
+  if(on){ btn.dataset.html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…'; }
+  else { btn.disabled = false; if(btn.dataset.html) btn.innerHTML = btn.dataset.html; }
 }
-
 function render(rows){
   countEl.textContent = rows.length;
   tbody.innerHTML = "";
@@ -253,8 +181,7 @@ function render(rows){
   }
   for(const r of rows){
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.driver_id ?? ""}</td>
+    tr.innerHTML = `<td>${r.driver_id ?? ""}</td>
       <td>${r.nome ?? ""}</td>
       <td>${r.ceps ?? ""}</td>
       <td>${r.regioes ?? ""}</td>
@@ -264,101 +191,108 @@ function render(rows){
   }
 }
 
+/* SHA-256 util */
 async function sha256(message){
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,"0")).join("");
+  const enc = new TextEncoder().encode(message);
+  const hash = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-/* ============ Admin Gate ============ */
-btnEnter.onclick = async ()=>{
-  const s = (adminPass.value||"").trim();
+/* === ADMIN GATE ===
+   - verifica hash em painel_admin.senha_hash (single row)
+   - ao validar: fecha modal e carrega todos via loadAll()
+*/
+btnEnter.onclick = async () => {
+  const s = (adminPass.value || "").trim();
+  gateMsg.textContent = "";
   if(!s){ gateMsg.textContent = "Digite a senha."; return; }
   gateMsg.textContent = "Verificando…";
   try{
     const hash = await sha256(s);
 
-    // tabela painel_admin deve ter 1 linha com a coluna senha_hash
+    // pega o hash salvo no supabase (tabela painel_admin, coluna senha_hash)
     const { data, error } = await supabase
       .from("painel_admin")
       .select("senha_hash")
       .limit(1)
       .single();
 
-    if(error || !data){ gateMsg.textContent = "Erro ao verificar (401?)."; return; }
+    if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
     if(hash === data.senha_hash){
       gate.style.display = "none";
-      showToast("Acesso liberado");
-    }else{
+      showToast("Acesso liberado — carregando dados...");
+      await loadAll(); // carrega tudo automaticamente
+    } else {
       gateMsg.textContent = "Senha incorreta.";
     }
-  }catch(e){
+  } catch(e){
+    console.error(e);
     gateMsg.textContent = "Falha na verificação.";
   }
 };
 
-/* ============ Actions ============ */
-btnLoadAll.onclick = async ()=>{
-  setLoading(btnLoadAll,true);
+/* === AÇÕES DO PAINEL === */
+async function loadAll(){
+  setLoading(btnLoadAll, true);
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
       .select("driver_id, nome, ceps, regioes, cidades, veiculo")
-      .order("nome", { ascending:true });
-
+      .order("nome", { ascending: true })
+      .limit(5000);
     if(error) throw error;
     allRows = data || [];
     render(allRows);
     showToast("Dados carregados");
-  }catch(e){
-    alert("Erro ao carregar: " + (e.message||e));
-  }finally{
-    setLoading(btnLoadAll,false);
+  } catch(e){
+    alert("Erro ao carregar: " + (e.message || e));
+    console.error(e);
+  } finally {
+    setLoading(btnLoadAll, false);
   }
-};
+}
 
-btnSearch.onclick = async ()=>{
-  const ids = idsBulk.value.split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean);
-  if(!ids.length){ alert("Informe um ou mais IDs."); return; }
-  setLoading(btnSearch,true);
+btnLoadAll.onclick = loadAll;
+
+btnSearch.onclick = async () => {
+  const ids = idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
+  if(!ids.length){ alert("Informe ao menos um ID."); return; }
+  setLoading(btnSearch, true);
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
       .select("driver_id, nome, ceps, regioes, cidades, veiculo")
       .in("driver_id", ids);
-
     if(error) throw error;
     allRows = data || [];
     render(allRows);
     showToast("Busca concluída");
-  }catch(e){
-    alert("Erro na busca: " + (e.message||e));
-  }finally{
-    setLoading(btnSearch,false);
+  } catch(e){
+    alert("Erro na busca: " + (e.message || e));
+  } finally {
+    setLoading(btnSearch, false);
   }
 };
 
-btnClear.onclick = ()=>{
+btnClear.onclick = () => {
   idsBulk.value = "";
   allRows = [];
   render(allRows);
 };
 
-btnExport.onclick = ()=>{
+btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
-  const rows = allRows.map(r => [
-    r.driver_id ?? "", r.nome ?? "", r.ceps ?? "",
-    r.regioes ?? "", r.cidades ?? "", r.veiculo ?? ""
-  ]);
+  // csv sem cabeçalho
+  const csv = allRows.map(r => [
+    r.driver_id ?? "",
+    r.nome ?? "",
+    r.ceps ?? "",
+    r.regioes ?? "",
+    r.cidades ?? "",
+    r.veiculo ?? ""
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
 
-  const headerWanted = false; // sem cabeçalho, como você pediu
-  let csv = "";
-  if(headerWanted){
-    csv += ["driver_id","nome","ceps","regioes","cidades","veiculo"].join(",") + "\n";
-  }
-  csv += rows.map(cols => cols.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-
-  const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+  const blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
@@ -366,6 +300,13 @@ btnExport.onclick = ()=>{
   a.click();
   showToast("CSV exportado");
 };
+
+/* Ao abrir a página: modal bloqueando até admin validar */
+/* Se desejar testar sem modal, comente a linha abaixo (gate.style.display = "none") */
+// gate.style.display = "grid"; // já está visível por padrão no HTML
+
+// opcional: tentar carregar automaticamente se a tabela painel_admin estiver vazia ou for pública
+// (por segurança, eu não forcei loadAll aqui — o comportamento correto é exigir a senha)
 </script>
 </body>
 </html>
