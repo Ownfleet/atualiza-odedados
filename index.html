@@ -30,49 +30,39 @@ h2{
   border-radius:var(--radius); border:1px solid rgba(255,255,255,.5);
   box-shadow:var(--shadow); padding:24px; margin:auto; max-width:980px;
 }
-.badge-region{ background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;
-  display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0;}
+.badge-region{
+  background:var(--brand);color:#fff;padding:.55rem .95rem;border-radius:999px;
+  display:inline-flex;align-items:center;gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0;
+}
 .badge-region i{ cursor:pointer; }
-.sticky-submit{ position:sticky;bottom:0;padding-top:.6rem;
-  background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%); }
+.sticky-submit{
+  position:sticky;bottom:0;padding-top:.6rem;
+  background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%);
+}
 .small-dim{ font-size:.9rem; color:#6b7280; }
-#auth-card{ max-width:520px }
 </style>
 </head>
 <body>
   <h2>Cadastro de Regiões • Shopee</h2>
 
-  <!-- CARD DE AUTENTICAÇÃO -->
-  <div id="auth-card" class="card d-none">
-    <h5 class="mb-3"><i class="fa fa-lock"></i> Entrar</h5>
-    <div class="row g-3">
-      <div class="col-12">
-        <label class="form-label">E-mail</label>
-        <input type="email" id="email" class="form-control" placeholder="seu@email.com">
-      </div>
-      <div class="col-12">
-        <label class="form-label">Senha</label>
-        <input type="password" id="password" class="form-control" placeholder="••••••••">
-      </div>
-      <div class="col-12 d-flex gap-2">
-        <button id="btn-login" class="btn btn-primary"><i class="fa fa-right-to-bracket"></i> Entrar</button>
-        <button id="btn-signup" class="btn btn-outline-primary"><i class="fa fa-user-plus"></i> Criar conta</button>
-      </div>
-      <div class="col-12 small-dim">Dica: nas configurações do Supabase você pode desativar confirmação de e-mail para agilizar (Auth → Email).</div>
-    </div>
-  </div>
-
-  <!-- CARD PRINCIPAL -->
-  <div id="main-card" class="card d-none">
+  <div id="main-card" class="card">
+    <!-- 🔐 Barra de autenticação (Gmail) -->
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div class="small-dim">Logado como: <b id="whoami">...</b></div>
-      <button id="btn-logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
+      <div class="small-dim">Status: <b id="auth-status">Deslogado</b></div>
+      <div class="d-flex gap-2">
+        <button type="button" id="btn-google" class="btn btn-outline-dark">
+          <i class="fa-brands fa-google"></i> Entrar com Google
+        </button>
+        <button type="button" id="btn-logout" class="btn btn-outline-danger d-none">
+          <i class="fa fa-power-off"></i> Sair
+        </button>
+      </div>
     </div>
     <hr>
 
     <div class="small-dim mb-2">
-      Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões. Depois clique em <b>Enviar</b>.
-      <br><b>Observação:</b> após o primeiro cadastro, o <b>ID</b> fica travado.
+      Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões que atende. Depois clique em <b>Enviar</b>.<br>
+      <span id="owner-hint" class="text-success d-none">Sua conta Google está vinculada a este cadastro.</span>
     </div>
 
     <form id="form-regioes" autocomplete="off">
@@ -80,7 +70,7 @@ h2{
         <div class="col-md-4">
           <label class="form-label">ID</label>
           <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
-          <div class="small-dim mt-1">O ID fica bloqueado após salvar pela primeira vez.</div>
+          <div class="small-dim mt-1">Ao digitar o ID e sair do campo, buscamos seus dados salvos (se houver).</div>
         </div>
         <div class="col-md-8">
           <label class="form-label">Nome</label>
@@ -149,14 +139,10 @@ h2{
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // === ELEMENTOS ===
-    const authCard = document.getElementById("auth-card");
-    const mainCard = document.getElementById("main-card");
-    const whoami   = document.getElementById("whoami");
-    const emailEl  = document.getElementById("email");
-    const passEl   = document.getElementById("password");
-    document.getElementById("btn-login").onclick = login;
-    document.getElementById("btn-signup").onclick = signup;
-    document.getElementById("btn-logout").onclick = logout;
+    const authStatus = document.getElementById("auth-status");
+    const btnGoogle  = document.getElementById("btn-google");
+    const btnLogout  = document.getElementById("btn-logout");
+    const ownerHint  = document.getElementById("owner-hint");
 
     const idInput       = document.getElementById("id");
     const nomeInput     = document.getElementById("nome");
@@ -174,12 +160,21 @@ h2{
     // === ESTADO ===
     let itens = [];
     let currentUser = null;
-    let existingRow = null; // registro já existente do usuário
+    let hasOwnerColumn = false; // será detectado automaticamente
+    let existingByOwner = null; // se achar um registro do usuário logado
 
+    // --- utils
     const csvToArray = (csv) => csv ? csv.split(",").map(s => s.trim()).filter(Boolean) : [];
     const arrToCsv   = (arr) => (arr || []).join(",");
 
-    // CEP -> bairro via ViaCEP
+    // Detecta se a coluna "owner" existe (para operar de forma compatível)
+    async function detectOwnerColumn(){
+      const { error } = await supabase.from("atualizar_bairros").select("owner").limit(1);
+      hasOwnerColumn = !error;
+      ownerHint.classList.toggle("d-none", !(hasOwnerColumn && currentUser));
+    }
+
+    // CEP -> BAIRRO (ViaCEP)
     cepInput.addEventListener("input", () => {
       const cep = (cepInput.value || "").replace(/\D/g, "");
       if (cep.length === 8) {
@@ -216,58 +211,24 @@ h2{
       if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
       if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
       if (itens.length >= 20) return alert("Máximo de 20 entradas.");
+
       itens.push({ cep, bairro, cidade });
       renderLista(); updateHidden();
       cepInput.value = ""; regiaoInput.value = "";
     });
 
-    // === AUTH FLOW
-    async function signup(){
-      const email = emailEl.value.trim(); const password = passEl.value.trim();
-      if (!email || !password) return alert("Informe e-mail e senha.");
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) return alert(error.message);
-      alert("Conta criada! Agora faça login.");
-    }
-    async function login(){
-      const email = emailEl.value.trim(); const password = passEl.value.trim();
-      if (!email || !password) return alert("Informe e-mail e senha.");
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return alert(error.message);
-    }
-    async function logout(){ await supabase.auth.signOut(); }
-
-    supabase.auth.onAuthStateChange(async (_evt, session) => {
-      currentUser = session?.user || null;
-      if (!currentUser){
-        authCard.classList.remove("d-none");
-        mainCard.classList.add("d-none");
-        return;
-      }
-      whoami.textContent = currentUser.email || currentUser.id;
-      authCard.classList.add("d-none");
-      mainCard.classList.remove("d-none");
-      await carregarDoProprioUsuario();
-    });
-
-    // === BUSCAR/POPULAR DADOS DO PRÓPRIO USUÁRIO
-    async function carregarDoProprioUsuario(){
-      existingRow = null;
-      itens = []; renderLista(); updateHidden();
-      idInput.disabled = false;
-
+    // === CARREGAR cadastro ao informar ID (fluxo antigo preservado)
+    async function carregarCadastroByDriverId(driverId){
+      if (!driverId) return;
       const { data, error } = await supabase
         .from("atualizar_bairros")
         .select("*")
-        .eq("owner", currentUser.id)
+        .eq("driver_id", driverId)
         .maybeSingle();
 
       if (error) { console.warn(error); return; }
 
       if (data){
-        existingRow = data;
-        idInput.value   = data.driver_id || "";
-        idInput.disabled = true; // travar ID
         nomeInput.value = data.nome || "";
         veiculoSelect.value = data.veiculo || "Moto";
 
@@ -275,6 +236,7 @@ h2{
         const arrBairros = csvToArray(data.regioes);
         const arrCidades = csvToArray(data.cidades);
 
+        itens = [];
         const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
         for (let i=0;i<n;i++){
           const cep = (arrCeps[i]||"").trim();
@@ -284,27 +246,93 @@ h2{
         }
         renderLista(); updateHidden();
       } else {
-        // primeiro acesso: só nome/ID liberados
-        idInput.value = "";
+        // novo cadastro
+        itens = []; renderLista(); updateHidden();
         nomeInput.value = "";
         veiculoSelect.value = "Moto";
       }
     }
 
-    // === SUBMIT (sempre escreve com owner = auth.uid)
+    idInput.addEventListener("change", () => carregarCadastroByDriverId(idInput.value.trim()));
+    idInput.addEventListener("blur",   () => carregarCadastroByDriverId(idInput.value.trim()));
+
+    // se vier ?id= na URL, carrega automático (fluxo antigo)
+    const url = new URL(location.href);
+    const qid = url.searchParams.get("id");
+    if (qid){ idInput.value = qid; carregarCadastroByDriverId(qid); }
+
+    // === AUTH (Gmail)
+    btnGoogle.addEventListener("click", async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.href,
+          queryParams: { prompt: 'select_account' }
+        }
+      });
+      if (error) alert(error.message);
+    });
+
+    btnLogout.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+    });
+
+    supabase.auth.onAuthStateChange(async (_evt, session) => {
+      currentUser = session?.user || null;
+
+      authStatus.textContent = currentUser ? (currentUser.email || 'Logado') : 'Deslogado';
+      btnGoogle.classList.toggle("d-none", !!currentUser);
+      btnLogout.classList.toggle("d-none", !currentUser);
+
+      await detectOwnerColumn();
+
+      // Se tiver coluna owner e usuário logado, tentar carregar o cadastro desse owner
+      existingByOwner = null;
+      if (currentUser && hasOwnerColumn){
+        const { data, error } = await supabase
+          .from("atualizar_bairros")
+          .select("*")
+          .eq("owner", currentUser.id)
+          .maybeSingle();
+
+        if (!error && data){
+          existingByOwner = data;
+          // Preencher e (opcional) travar ID na UI para reduzir erros
+          idInput.value = data.driver_id || "";
+          nomeInput.value = data.nome || "";
+          veiculoSelect.value = data.veiculo || "Moto";
+
+          const arrCeps    = csvToArray(data.ceps);
+          const arrBairros = csvToArray(data.regioes);
+          const arrCidades = csvToArray(data.cidades);
+
+          itens = [];
+          const n = Math.max(arrCeps.length, arrBairros.length, arrCidades.length);
+          for (let i=0;i<n;i++){
+            const cep = (arrCeps[i]||"").trim();
+            const bairro = (arrBairros[i]||"").trim().toUpperCase();
+            const cidade = (arrCidades[i]||"").trim() || "Guarulhos";
+            if (cep && bairro) itens.push({ cep, bairro, cidade });
+          }
+          renderLista(); updateHidden();
+        }
+      }
+
+      ownerHint.classList.toggle("d-none", !(hasOwnerColumn && currentUser));
+    });
+
+    // === SUBMIT (UPSERT + LOG) – compatível
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!currentUser) return alert("Faça login primeiro.");
 
       if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
 
       const driver_id = (idInput.value || "").trim();
-      if (!existingRow && !driver_id) return alert("Informe seu ID (primeiro cadastro).");
-      if (existingRow && !idInput.disabled) idInput.disabled = true; // segurança extra
+      if (!driver_id) return alert("Informe seu ID.");
 
-      const payload = {
-        owner: currentUser.id,
-        driver_id: existingRow ? existingRow.driver_id : driver_id,
+      // monta payload básico
+      const basePayload = {
+        driver_id,
         nome: (nomeInput.value || "").trim(),
         ceps: (cepsConsolidados.value || "").trim(),
         regioes: (regioesConsolidadas.value || "").trim(),
@@ -313,30 +341,48 @@ h2{
         updated_at: new Date().toISOString()
       };
 
+      // anexa owner apenas se coluna existir e usuário estiver logado
+      const payload = (hasOwnerColumn && currentUser)
+        ? { ...basePayload, owner: currentUser.id }
+        : basePayload;
+
       try{
-        // UPSERT por owner (índice único)
+        // UPSERT snapshot (segue onConflict pelo driver_id, como já fazia)
+        let upsertError = null;
         const { error: upErr } = await supabase
           .from("atualizar_bairros")
-          .upsert(payload, { onConflict: "owner" });
-        if (upErr) throw upErr;
+          .upsert(payload, { onConflict: "driver_id" });
+        upsertError = upErr;
 
-        // LOG histórico com owner
-        const { error: logErr } = await supabase
-          .from("atualizar_bairros_log")
-          .insert({
-            owner: currentUser.id,
-            driver_id: payload.driver_id,
-            nome: payload.nome,
-            ceps: payload.ceps,
-            regioes: payload.regioes,
-            cidades: payload.cidades,
-            veiculo: payload.veiculo,
-            created_at: payload.updated_at
-          });
-        if (logErr) throw logErr;
+        // fallback: se falhar por causa da coluna owner inexistente, tenta sem owner
+        if (upsertError && /column .*owner.* does not exist/i.test(upsertError.message)){
+          const { error: up2 } = await supabase
+            .from("atualizar_bairros")
+            .upsert(basePayload, { onConflict: "driver_id" });
+          if (up2) throw up2;
+        } else if (upsertError){
+          throw upsertError;
+        }
 
-        alert("Dados salvos!");
-        await carregarDoProprioUsuario(); // re-carrega para travar ID etc.
+        // LOG histórico (se existir a tabela log)
+        try{
+          const logRow = {
+            driver_id: basePayload.driver_id,
+            nome: basePayload.nome,
+            ceps: basePayload.ceps,
+            regioes: basePayload.regioes,
+            cidades: basePayload.cidades,
+            veiculo: basePayload.veiculo,
+            created_at: basePayload.updated_at,
+            ...(hasOwnerColumn && currentUser ? { owner: currentUser.id } : {})
+          };
+          await supabase.from("atualizar_bairros_log").insert(logRow);
+        }catch(logErr){
+          // Se a tabela/coluna não existir, só registra no console e segue
+          console.warn("log insert warn:", logErr?.message || logErr);
+        }
+
+        alert("Dados enviados com sucesso!");
       }catch(err){
         console.error(err);
         alert("Erro ao salvar: " + (err?.message || err));
