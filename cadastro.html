@@ -10,140 +10,141 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
-:root{
-  --brand:#ee4d2d; --brand-2:#ff6b3d; --ink:#1f2937;
-  --card:rgba(255,255,255,.92); --radius:20px;
-  --shadow:0 18px 48px rgba(238,77,45,.25);
+:root {
+  --brand: #ee4d2d;
+  --brand-2: #ff6b3d;
+  --bg: #fff7f5;
+  --card: rgba(255,255,255,.95);
+  --shadow: 0 18px 48px rgba(238,77,45,.25);
 }
-html,body{
-  min-height:100%;
-  background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
-  color:var(--ink);
+body {
+  background: linear-gradient(145deg, var(--brand), var(--brand-2));
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0; padding: 0;
 }
-h2{
-  color:#fff;text-align:center;font-weight:900;margin:30px 0 20px;
-  text-shadow:0 3px 8px rgba(0,0,0,.25);
+.modal-content {
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  border: none;
 }
-.card{
-  background:var(--card);backdrop-filter:blur(8px);
-  border-radius:var(--radius);border:1px solid rgba(255,255,255,.5);
-  box-shadow:var(--shadow);padding:24px;margin:auto;max-width:980px;
+h5.modal-title {
+  color: var(--brand);
+  font-weight: 800;
 }
-.badge-region{
-  background:var(--brand);color:#fff;padding:.55rem .95rem;
-  border-radius:999px;display:inline-flex;align-items:center;
-  gap:.6rem;font-weight:700;margin:.3rem .3rem 0 0;
+.btn-primary {
+  background: var(--brand);
+  border: none;
 }
-.badge-region i{cursor:pointer}
-.sticky-submit{
-  position:sticky;bottom:0;padding-top:.6rem;
-  background:linear-gradient(180deg,rgba(255,255,255,0)0%,#fff 40%);
+.btn-primary:hover { background: var(--brand-2); }
+.badge-region {
+  background: var(--brand);
+  color: #fff;
+  padding: .55rem .95rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font-weight: 600;
+  margin: .3rem .3rem 0 0;
 }
-.small-dim{font-size:.9rem;color:#6b7280}
+.badge-region i { cursor: pointer; }
+.small-dim { font-size: .9rem; color: #6b7280; }
 </style>
 </head>
 
 <body>
-<h2>Cadastro de Regiões • OwnFleet</h2>
-
-<div id="main-card" class="card">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="small-dim">Logado: <b id="whoami">Verificando...</b></div>
-    <div class="d-flex gap-2">
-      <button id="refresh" class="btn btn-sm btn-outline-secondary"><i class="fa fa-rotate"></i></button>
-      <button id="logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i> Sair</button>
-    </div>
-  </div>
-  <hr>
-
-  <div class="small-dim mb-2">
-    Preencha seu <b>ID</b>, <b>Nome</b> e adicione as regiões que atende.
-    Após o primeiro envio, o <b>ID</b> fica bloqueado.
-  </div>
-
-  <form id="form-regioes" autocomplete="off">
-    <div class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label">ID</label>
-        <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
-        <div class="small-dim mt-1">O ID é salvo no primeiro envio e não poderá ser alterado.</div>
+<!-- Modal Principal -->
+<div class="modal fade show" id="cadastroModal" tabindex="-1" style="display:block;background:rgba(0,0,0,.45);">
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-content p-3">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-map-location-dot me-2"></i>Cadastro de Regiões</h5>
+        <button id="logout" class="btn btn-sm btn-outline-danger"><i class="fa fa-power-off"></i></button>
       </div>
 
-      <div class="col-md-8">
-        <label class="form-label">Nome</label>
-        <input type="text" id="nome" class="form-control" required placeholder="Seu nome completo">
-      </div>
+      <div class="modal-body">
+        <div class="small-dim mb-3">
+          Logado como <b id="whoami">-</b>
+        </div>
 
-      <div class="col-md-3">
-        <label class="form-label">CEP</label>
-        <input type="text" id="cep" class="form-control" maxlength="8" placeholder="Somente números">
-      </div>
+        <form id="form-regioes" autocomplete="off">
+          <div class="mb-3">
+            <label class="form-label">ID</label>
+            <input type="text" id="id" class="form-control" placeholder="Seu ID" required>
+            <div class="small-dim">O ID é salvo no primeiro envio e não poderá ser alterado.</div>
+          </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Região / Bairro</label>
-        <input type="text" id="regiao" class="form-control" readonly placeholder="Preencha o CEP para buscar">
-      </div>
+          <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <input type="text" id="nome" class="form-control" required placeholder="Seu nome completo">
+          </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Cidade</label>
-        <select id="cidadeAtual" class="form-select">
-          <option selected>Guarulhos</option>
-          <option>São Paulo</option>
-          <option>Mairiporã</option>
-          <option>Outros</option>
-        </select>
-      </div>
+          <div class="mb-3">
+            <label class="form-label">CEP</label>
+            <input type="text" id="cep" class="form-control" maxlength="8" placeholder="Somente números">
+          </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Veículo</label>
-        <select id="veiculo" class="form-select">
-          <option selected>Moto</option>
-          <option>Passeio</option>
-          <option>Fiorino</option>
-          <option>Van</option>
-        </select>
-      </div>
+          <div class="mb-3">
+            <label class="form-label">Região / Bairro</label>
+            <input type="text" id="regiao" class="form-control" readonly placeholder="Preencha o CEP para buscar">
+          </div>
 
-      <div class="col-md-12 d-grid">
-        <button type="button" class="btn btn-primary" id="add-regiao">
-          <i class="fa fa-plus"></i> Adicionar Região (CEP + Bairro + Cidade)
-        </button>
-      </div>
+          <div class="mb-3">
+            <label class="form-label">Cidade</label>
+            <select id="cidadeAtual" class="form-select">
+              <option selected>Guarulhos</option>
+              <option>São Paulo</option>
+              <option>Mairiporã</option>
+              <option>Outros</option>
+            </select>
+          </div>
 
-      <div class="col-12">
-        <div id="lista-regioes"></div>
-        <small class="small-dim">
-          Máximo de 20 entradas. Repetir <b>mesmo bairro</b> com <b>CEP diferente</b> é permitido.
-        </small>
-      </div>
+          <div class="mb-3">
+            <label class="form-label">Veículo</label>
+            <select id="veiculo" class="form-select">
+              <option selected>Moto</option>
+              <option>Passeio</option>
+              <option>Fiorino</option>
+              <option>Van</option>
+            </select>
+          </div>
 
-      <input type="hidden" id="regioes-consolidadas">
-      <input type="hidden" id="ceps-consolidados">
-      <input type="hidden" id="cidades-consolidadas">
+          <div class="d-grid mb-3">
+            <button type="button" id="add-regiao" class="btn btn-primary">
+              <i class="fa fa-plus"></i> Adicionar Região (CEP + Bairro + Cidade)
+            </button>
+          </div>
 
-      <div class="col-12 sticky-submit">
-        <button type="submit" class="btn btn-success w-100" id="btnEnviar">
-          <i class="fa fa-paper-plane"></i> Enviar
-        </button>
+          <div id="lista-regioes" class="mb-3"></div>
+          <small class="small-dim d-block mb-3">Máximo de 20 entradas. Pode repetir o mesmo bairro com CEP diferente.</small>
+
+          <input type="hidden" id="regioes-consolidadas">
+          <input type="hidden" id="ceps-consolidados">
+          <input type="hidden" id="cidades-consolidadas">
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success">
+              <i class="fa fa-paper-plane"></i> Enviar
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-  </form>
+  </div>
 </div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
-
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// === ELEMENTOS ===
 const whoami = document.getElementById("whoami");
-const btnLogout = document.getElementById("logout");
-const btnRefresh = document.getElementById("refresh");
 const idInput = document.getElementById("id");
 const nomeInput = document.getElementById("nome");
 const cepInput = document.getElementById("cep");
@@ -156,157 +157,115 @@ const form = document.getElementById("form-regioes");
 const cepsConsolidados = document.getElementById("ceps-consolidados");
 const regioesConsolidadas = document.getElementById("regioes-consolidadas");
 const cidadesConsolidadas = document.getElementById("cidades-consolidadas");
-const btnEnviar = document.getElementById("btnEnviar");
+const btnLogout = document.getElementById("logout");
 
-// === ESTADO ===
-let itens = [];
-let currentUser = null;
-let existingRow = null;
-let isLoggingOut = false;
+let itens = [], currentUser = null, existingRow = null, isLoggingOut = false;
 
-// === CEP -> BAIRRO (ViaCEP)
+// === CEP -> Bairro ===
 cepInput.addEventListener("input", () => {
-  const cep = (cepInput.value || "").replace(/\D/g, "");
+  const cep = cepInput.value.replace(/\D/g, "");
   if (cep.length === 8) {
     fetch(`https://viacep.com.br/ws/${cep}/json/`)
       .then(r => r.json())
       .then(d => regiaoInput.value = d?.bairro || "Não encontrado")
       .catch(() => regiaoInput.value = "Erro ao buscar");
-  } else {
-    regiaoInput.value = "";
-  }
+  } else regiaoInput.value = "";
 });
 
-// === LISTA REGIÕES ===
-function renderLista() {
+// === Lista ===
+function renderLista(){
   lista.innerHTML = "";
-  itens.forEach((it, i) => {
+  itens.forEach((it,i)=>{
     const s = document.createElement("span");
-    s.className = "badge-region";
-    s.innerHTML = `${it.bairro} <small>(${it.cep} • ${it.cidade})</small> <i class="fa fa-times" title="Remover" onclick="remover(${i})"></i>`;
+    s.className="badge-region";
+    s.innerHTML=`${it.bairro} (${it.cep} • ${it.cidade}) <i class='fa fa-times' onclick='remover(${i})'></i>`;
     lista.appendChild(s);
   });
 }
-function updateHidden() {
-  cepsConsolidados.value = itens.map(x => x.cep).join(",");
-  regioesConsolidadas.value = itens.map(x => x.bairro).join(",");
-  cidadesConsolidadas.value = itens.map(x => x.cidade).join(",");
+window.remover=(i)=>{itens.splice(i,1);renderLista();updateHidden();};
+function updateHidden(){
+  cepsConsolidados.value = itens.map(x=>x.cep).join(",");
+  regioesConsolidadas.value = itens.map(x=>x.bairro).join(",");
+  cidadesConsolidadas.value = itens.map(x=>x.cidade).join(",");
 }
-window.remover = (idx) => { itens.splice(idx, 1); renderLista(); updateHidden(); };
 
-addButton.addEventListener("click", () => {
-  const cep = cepInput.value.trim();
-  const bairro = regiaoInput.value.trim().toUpperCase();
-  const cidade = cidadeAtual.value.trim();
-  if (!cep || cep.length !== 8) return alert("Digite um CEP válido (8 dígitos).");
-  if (!bairro) return alert("Busque o CEP para capturar a região/bairro.");
-  if (itens.some(x => x.cep === cep && x.bairro === bairro)) return;
-  if (itens.length >= 20) return alert("Máximo de 20 entradas.");
-
-  itens.push({ cep, bairro, cidade });
-  renderLista(); updateHidden();
-  cepInput.value = ""; regiaoInput.value = "";
+// === Adicionar Região ===
+addButton.addEventListener("click",()=>{
+  const cep=cepInput.value.trim(), bairro=regiaoInput.value.trim().toUpperCase(), cidade=cidadeAtual.value.trim();
+  if(!cep||cep.length!==8)return alert("CEP inválido!");
+  if(!bairro)return alert("Busque o CEP para capturar o bairro.");
+  if(itens.some(x=>x.cep===cep&&x.bairro===bairro))return;
+  if(itens.length>=20)return alert("Máximo de 20 entradas.");
+  itens.push({cep,bairro,cidade});renderLista();updateHidden();
+  cepInput.value="";regiaoInput.value="";
 });
 
-// === LOGOUT
-btnLogout.onclick = async () => {
-  if (isLoggingOut) return;
-  isLoggingOut = true;
-  try { await supabase.auth.signOut(); } catch (_) {}
+// === Logout ===
+btnLogout.onclick = async ()=>{
+  if(isLoggingOut)return;
+  isLoggingOut=true;
+  try{await supabase.auth.signOut();}catch(_){}
   window.location.replace("index.html");
 };
 
-// === REFRESH manual
-btnRefresh.onclick = ()=> carregarDoOwner();
-
-// === AUTH E CARREGAMENTO ===
-async function checarSessao() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    alert("Sessão expirada. Faça login novamente.");
-    return window.location.replace("index.html");
-  }
-  currentUser = session.user;
-  whoami.textContent = currentUser.email || currentUser.id;
-  return currentUser;
-}
-
-supabase.auth.onAuthStateChange(async (_evt, session) => {
-  if (!session && !isLoggingOut) {
-    window.location.replace("index.html");
-  }
+// === Sessão ===
+supabase.auth.onAuthStateChange(async(_evt,session)=>{
+  if(!session?.user&&!isLoggingOut)return window.location.replace("index.html");
+  if(session?.user){currentUser=session.user;whoami.textContent=currentUser.email;await carregar();}
 });
 
-(async () => {
-  await checarSessao();
-  await carregarDoOwner();
+(async()=>{
+  const {data:{user}}=await supabase.auth.getUser();
+  if(!user)return window.location.replace("index.html");
+  currentUser=user;whoami.textContent=user.email;await carregar();
 })();
 
-// === CARREGAR snapshot ===
-async function carregarDoOwner() {
-  existingRow = null; itens = []; renderLista(); updateHidden(); idInput.disabled = false;
-  const { data, error } = await supabase.from("atualizar_bairros").select("*").eq("owner", currentUser.id).maybeSingle();
-  if (!error && data) {
-    existingRow = data;
-    idInput.value = data.driver_id || "";
-    idInput.disabled = true;
-    nomeInput.value = data.nome || "";
-    veiculoSelect.value = data.veiculo || "Moto";
-    const ceps = (data.ceps || "").split(",").filter(Boolean);
-    const regioes = (data.regioes || "").split(",").filter(Boolean);
-    const cidades = (data.cidades || "").split(",").filter(Boolean);
-    const n = Math.max(ceps.length, regioes.length, cidades.length);
-    for (let i = 0; i < n; i++) {
-      if (ceps[i] && regioes[i]) itens.push({ cep: ceps[i], bairro: regioes[i], cidade: cidades[i] || "Guarulhos" });
-    }
-    renderLista(); updateHidden();
+// === Carregar ===
+async function carregar(){
+  existingRow=null;itens=[];renderLista();updateHidden();idInput.disabled=false;
+  const {data,error}=await supabase.from("atualizar_bairros").select("*").eq("owner",currentUser.id).maybeSingle();
+  if(!error&&data){
+    existingRow=data;
+    idInput.value=data.driver_id||"";idInput.disabled=true;
+    nomeInput.value=data.nome||"";veiculoSelect.value=data.veiculo||"Moto";
+    const ceps=(data.ceps||"").split(",").filter(Boolean);
+    const bairros=(data.regioes||"").split(",").filter(Boolean);
+    const cidades=(data.cidades||"").split(",").filter(Boolean);
+    for(let i=0;i<ceps.length;i++)itens.push({cep:ceps[i],bairro:bairros[i],cidade:cidades[i]||"Guarulhos"});
+    renderLista();updateHidden();
   }
 }
 
-// === SUBMIT ===
-form.addEventListener("submit", async (e) => {
+// === Enviar ===
+form.addEventListener("submit",async(e)=>{
   e.preventDefault();
-  btnEnviar.disabled = true;
+  try{
+    if(itens.length<1)return alert("Adicione pelo menos 1 região.");
+    const driver_id=idInput.value.trim();
+    if(!driver_id)return alert("Informe seu ID.");
 
-  try {
-    const user = await checarSessao();
-    if (!user) return;
-
-    if (itens.length < 1) return alert("Adicione pelo menos 1 entrada (CEP + Bairro).");
-    const driver_id = idInput.value.trim();
-    if (!driver_id) return alert("Informe seu ID.");
-
-    const payload = {
-      owner: user.id,
-      email: user.email || null,
+    const payload={
+      owner:currentUser.id,
+      email:currentUser.email,
       driver_id,
-      nome: nomeInput.value.trim(),
-      ceps: cepsConsolidados.value,
-      regioes: regioesConsolidadas.value,
-      cidades: cidadesConsolidadas.value,
-      veiculo: veiculoSelect.value,
-      updated_at: new Date().toISOString()
+      nome:nomeInput.value.trim(),
+      ceps:cepsConsolidados.value,
+      regioes:regioesConsolidadas.value,
+      cidades:cidadesConsolidadas.value,
+      veiculo:veiculoSelect.value,
+      updated_at:new Date().toISOString()
     };
 
-    const { error: upErr } = await supabase.from("atualizar_bairros").upsert(payload, { onConflict: "owner" });
-    if (upErr) throw upErr;
-
-    const { error: logErr } = await supabase.from("atualizar_bairros_log").insert({
-      ...payload, created_at: payload.updated_at
-    });
-    if (logErr) throw logErr;
-
+    const {error:upErr}=await supabase.from("atualizar_bairros").upsert(payload,{onConflict:"owner"});
+    if(upErr)throw upErr;
+    await supabase.from("atualizar_bairros_log").insert({...payload,created_at:payload.updated_at});
     alert("✅ Dados salvos com sucesso!");
-    await carregarDoOwner();
-
-  } catch (err) {
-    console.error("❌ ERRO SUPABASE:", err);
-    alert("Erro ao salvar:\n\n" + (err?.message || JSON.stringify(err)));
-  } finally {
-    btnEnviar.disabled = false;
+    await carregar();
+  }catch(err){
+    console.error("Erro Supabase:",err);
+    alert("Erro ao salvar: "+(err?.message||JSON.stringify(err)));
   }
 });
 </script>
 </body>
 </html>
-
