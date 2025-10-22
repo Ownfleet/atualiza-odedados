@@ -21,10 +21,7 @@ html,body{
   font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
   color:var(--ink);
 }
-h2{
-  color:#fff; text-align:center; font-weight:900; margin:30px 0 20px;
-  text-shadow:0 3px 8px rgba(0,0,0,.25);
-}
+h2{ color:#fff; text-align:center; font-weight:900; margin:30px 0 20px; text-shadow:0 3px 8px rgba(0,0,0,.25); }
 .card{
   background:var(--card); backdrop-filter:blur(8px);
   border-radius:var(--radius); border:1px solid rgba(255,255,255,.5);
@@ -164,7 +161,9 @@ h2{
 
     const SUPABASE_URL = "https://rsevfpyozrbhgqnhzcjz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzZXZmcHlvenJiaGdxbmh6Y2p6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNDg5MzUsImV4cCI6MjA3NjYyNDkzNX0.ZmToXr8-g5WI-LSdPGzBOdoETAwCd7iUUSL0OXDNSuY";
-    const APP_URL = "https://ownfleet.github.io/atualiza-odedados/";
+
+    // sua página hospedada
+    const APP_URL  = "https://ownfleet.github.io/atualiza-odedados/";
     const APP_PATH = "/atualiza-odedados/";
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -195,25 +194,23 @@ h2{
     let user = null;
     let currentDriver = null;
 
-    // === LOGIN ===
+    // === LOGIN: volta DIRETO para APP_URL ===
     loginBtn.addEventListener("click", async () => {
       loginMsg.textContent = "";
-      const redirectThroughSupabase =
-        `${SUPABASE_URL}/auth/v1/callback?redirect_to=${encodeURIComponent(APP_URL)}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: redirectThroughSupabase,
+          redirectTo: APP_URL,                  // <- volta direto pro /atualiza-odedados/
           queryParams: { prompt: "select_account" },
         },
       });
       if (error) {
-        console.error(error);
+        console.error("[OAuth] erro:", error);
         loginMsg.textContent = "Erro ao abrir login do Google.";
       }
     });
 
-    // === FIX: redirecionamento da raiz para /atualiza-odedados/ ===
+    // === FIX: se tokens chegarem na RAIZ, envia para /atualiza-odedados/ mantendo o hash ===
     async function setSessionFromHash() {
       if (location.hash.includes("access_token") && location.pathname !== APP_PATH) {
         location.replace(APP_URL + location.hash);
@@ -231,11 +228,12 @@ h2{
           loginMsg.textContent = "Finalizando login…";
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
           if (error) loginMsg.textContent = "Falha ao finalizar login.";
+          else loginMsg.textContent = "";
         } catch {
           loginMsg.textContent = "Falha ao finalizar login.";
         }
       }
-      history.replaceState(null, "", APP_URL);
+      history.replaceState(null, "", APP_URL); // limpa o hash
     }
 
     logoutBtn.addEventListener("click", async () => {
@@ -248,12 +246,14 @@ h2{
 
     async function boot() {
       await setSessionFromHash();
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { loginCard.style.display = "block"; mainCard.style.display = "none"; return; }
 
       user = session.user;
-      userEmail.textContent = user.email;
-      loginCard.style.display = "none"; mainCard.style.display = "block";
+      userEmail.textContent = user.email || "";
+      loginCard.style.display = "none";
+      mainCard.style.display = "block";
       await carregarOuCriarVinculo();
     }
 
@@ -262,8 +262,12 @@ h2{
     async function carregarOuCriarVinculo() {
       const { data: u } = await supabase.auth.getUser();
       const { data } = await supabase
-        .from("driver_accounts").select("driver_id,nome").eq("user_id", u.user.id).maybeSingle();
-      if (data?.driver_id) {
+        .from("driver_accounts")
+        .select("driver_id,nome")
+        .eq("user_id", u.user.id)
+        .maybeSingle();
+
+      if (data?.driver_id){
         currentDriver = data.driver_id;
         idInput.value = currentDriver;
         idInput.readOnly = true;
@@ -295,7 +299,7 @@ h2{
       });
     }
     function updateHidden() {
-      cepsConsolidados.value = itens.map(x => x.cep).join(",");
+      cepsConsolidados.value    = itens.map(x => x.cep).join(",");
       regioesConsolidadas.value = itens.map(x => x.bairro).join(",");
       cidadesConsolidadas.value = itens.map(x => x.cidade).join(",");
     }
@@ -314,14 +318,28 @@ h2{
     });
 
     async function carregarCadastro(driverId) {
-      const { data } = await supabase.from("atualizar_bairros").select("*").eq("driver_id",driverId).maybeSingle();
+      const { data } = await supabase
+        .from("atualizar_bairros")
+        .select("*")
+        .eq("driver_id", driverId)
+        .maybeSingle();
       if (!data) return;
       nomeInput.value = data.nome || "";
       veiculoSelect.value = data.veiculo || "Moto";
-      const ceps = (data.ceps||"").split(",");
-      const bairros = (data.regioes||"").split(",");
-      const cidades = (data.cidades||"").split(",");
-      itens = ceps.map((c,i)=>({cep:c,bairro:bairros[i]||"",cidade:cidades[i]||"Guarulhos"}));
+
+      const csvToArr = s => (s||"").split(",").map(x=>x.trim()).filter(Boolean);
+      const ceps = csvToArr(data.ceps);
+      const bairros = csvToArr(data.regioes);
+      const cidades = csvToArr(data.cidades);
+
+      itens = [];
+      const n = Math.max(ceps.length,bairros.length,cidades.length);
+      for (let i=0;i<n;i++){
+        const cep = ceps[i]||"";
+        const bairro = (bairros[i]||"").toUpperCase();
+        const cidade = cidades[i]||"Guarulhos";
+        if (cep && bairro) itens.push({cep,bairro,cidade});
+      }
       renderLista(); updateHidden();
     }
 
@@ -330,22 +348,42 @@ h2{
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return alert("Faça login primeiro.");
       if (itens.length < 1) return alert("Adicione pelo menos 1 bairro.");
+
       const driver_id = currentDriver || idInput.value.trim();
       const payload = {
         driver_id,
-        nome:nomeInput.value.trim(),
-        ceps:cepsConsolidados.value,
-        regioes:regioesConsolidadas.value,
-        cidades:cidadesConsolidadas.value,
-        veiculo:veiculoSelect.value,
-        updated_at:new Date().toISOString(),
+        nome: nomeInput.value.trim(),
+        ceps: cepsConsolidados.value,
+        regioes: regioesConsolidadas.value,
+        cidades: cidadesConsolidadas.value,
+        veiculo: veiculoSelect.value,
+        updated_at: new Date().toISOString(),
         user_id: (await supabase.auth.getUser()).data.user.id
       };
-      await supabase.from("atualizar_bairros").upsert(payload,{onConflict:"driver_id"});
-      await supabase.from("atualizar_bairros_log").insert({...payload,created_at:payload.updated_at});
+
+      if (!currentDriver){
+        await supabase.from("driver_accounts")
+          .insert({ user_id: payload.user_id, driver_id, nome: payload.nome });
+        currentDriver = driver_id;
+        idInput.readOnly = true;
+        driverStatus.textContent = "Vinculado ao seu login.";
+      }
+
+      await supabase.from("atualizar_bairros").upsert(payload,{ onConflict:"driver_id" });
+      await supabase.from("atualizar_bairros_log").insert({
+        driver_id: payload.driver_id,
+        nome: payload.nome,
+        ceps: payload.ceps,
+        regioes: payload.regioes,
+        cidades: payload.cidades,
+        veiculo: payload.veiculo,
+        created_at: payload.updated_at
+      });
+
       alert("Dados enviados com sucesso!");
     });
 
+    // start
     boot();
   </script>
 </body>
