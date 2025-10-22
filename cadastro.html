@@ -181,13 +181,28 @@ addButton.addEventListener("click", () => {
   cepInput.value = ""; regiaoInput.value = "";
 });
 
-// === SESSÃO
-btnLogout.onclick = async ()=>{ await supabase.auth.signOut(); location.href = baseUrl() + "index.html"; }
+// === LOGOUT (forçado e com redirecionamento garantido)
+btnLogout.onclick = async () => {
+  try {
+    // limpa tokens locais primeiro para evitar race
+    localStorage.clear();
+    sessionStorage.clear();
+    await supabase.auth.signOut();
+  } catch (_) {
+    // ignora erro de rede/latência
+  } finally {
+    // volta sempre para o login
+    window.location.replace(baseUrl() + "index.html");
+  }
+};
+
+// === REFRESH manual
 btnRefresh.onclick = ()=> carregarDoOwner();
 
+// === SESSÃO / AUTH
 supabase.auth.onAuthStateChange(async (_evt, session)=>{
   currentUser = session?.user || null;
-  if(!currentUser){ location.href = baseUrl() + "index.html"; return; }
+  if(!currentUser){ window.location.replace(baseUrl() + "index.html"); return; }
   whoami.textContent = currentUser.email || currentUser.id;
   try{ await supabase.from("usuarios_motoristas").upsert({ owner: currentUser.id, email: currentUser.email||null }); }catch(_){}
   await carregarDoOwner();
@@ -195,7 +210,7 @@ supabase.auth.onAuthStateChange(async (_evt, session)=>{
 
 (async ()=>{
   const { data:{ user } } = await supabase.auth.getUser();
-  if(!user){ location.href = baseUrl() + "index.html"; return; }
+  if(!user){ window.location.replace(baseUrl() + "index.html"); return; }
   currentUser = user;
   whoami.textContent = user.email || user.id;
   await carregarDoOwner();
