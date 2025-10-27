@@ -48,13 +48,22 @@ tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.95rem}
 tbody tr:hover{background:#fffaf8}
 .empty{padding:28px;text-align:center;color:#64748b}
 
-/* loading overlay */
-.overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;display:none;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#ee4d2d}
-.overlay.show{display:flex}
+/* modal */
+.backdrop{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);z-index:100}
+.modal{width:min(94vw,420px);background:#fff;border-radius:16px;padding:18px;box-shadow:0 26px 60px rgba(0,0,0,.25)}
+.modal h2{margin:0 0 6px;font-size:1.2rem}
+.modal p{margin:0 0 12px;color:#475569}
+.input{width:100%;padding:12px;border-radius:10px;border:1px solid #e6e6e6}
+.msg{margin-top:8px;color:#b00020;font-size:.95rem}
+.kbd{background:#eef2ff;border-radius:6px;padding:4px 8px;font-weight:700;color:#0f172a;font-size:.82rem}
 
 /* toast */
 .toast{position:fixed;right:18px;bottom:18px;background:rgba(255,255,255,.96);padding:10px 14px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
 .toast.show{display:block}
+
+/* overlay */
+.overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;display:none;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#ee4d2d}
+.overlay.show{display:flex}
 </style>
 </head>
 <body>
@@ -80,7 +89,6 @@ tbody tr:hover{background:#fffaf8}
 
     <div class="toolbar">
       <textarea id="idsBulk" placeholder="IDs separados por vírgula, espaço ou quebra de linha — use para exportar/exibir apenas esses IDs quando quiser."></textarea>
-
       <div class="controls">
         <button id="btnSearch" class="btn btn-blue"><i class="fa-solid fa-search"></i> Buscar</button>
         <button id="btnClear" class="btn btn-gray"><i class="fa-solid fa-eraser"></i> Limpar</button>
@@ -92,23 +100,36 @@ tbody tr:hover{background:#fffaf8}
       <table id="table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>CEP(s)</th>
-            <th>Região/Bairro(s)</th>
-            <th>Cidade(s)</th>
-            <th>Veículo</th>
+            <th>ID</th><th>Nome</th><th>CEP(s)</th><th>Região/Bairro(s)</th><th>Cidade(s)</th><th>Veículo</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr class="empty"><td colspan="6">Sem dados carregados.</td></tr>
+          <tr class="empty"><td colspan="6">Sem dados. Insira a senha para liberar o painel.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<div id="toast" class="toast"><i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:8px"></i><span id="toastMsg">OK</span></div>
+<!-- gate -->
+<div class="backdrop" id="gate">
+  <div class="modal">
+    <h2><i class="fa-solid fa-lock"></i> Acesso Administrativo</h2>
+    <p>Digite a senha para visualizar o painel completo.</p>
+    <input id="adminPass" type="password" class="input" placeholder="Senha admin" />
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button id="btnEnter" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+    </div>
+    <div id="gateMsg" class="msg"></div>
+    <p style="margin-top:12px;color:#475569;font-size:.88rem">
+      A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.
+    </p>
+  </div>
+</div>
+
+<div id="toast" class="toast">
+  <i class="fa-solid fa-circle-check" style="color:#16a34a;margin-right:8px"></i><span id="toastMsg">OK</span>
+</div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -125,6 +146,10 @@ const btnClear = document.getElementById("btnClear");
 const btnLoadAll = document.getElementById("btnLoadAll");
 const btnExport = document.getElementById("btnExport");
 const overlay = document.getElementById("overlay");
+const gate = document.getElementById("gate");
+const adminPass = document.getElementById("adminPass");
+const btnEnter = document.getElementById("btnEnter");
+const gateMsg = document.getElementById("gateMsg");
 const toast = document.getElementById("toast");
 const toastMsg = document.getElementById("toastMsg");
 let allRows = [];
@@ -144,8 +169,7 @@ function render(rows){
   }
   for(const r of rows){
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.driver_id ?? ""}</td>
+    tr.innerHTML = `<td>${r.driver_id ?? ""}</td>
       <td>${r.nome ?? ""}</td>
       <td>${r.ceps ?? ""}</td>
       <td>${r.regioes ?? ""}</td>
@@ -154,6 +178,28 @@ function render(rows){
     tbody.appendChild(tr);
   }
 }
+
+async function sha256(message){
+  const enc = new TextEncoder().encode(message);
+  const hash = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+btnEnter.onclick = async () => {
+  const s = adminPass.value.trim();
+  if(!s){ gateMsg.textContent = "Digite a senha."; return; }
+  gateMsg.textContent = "Verificando…";
+  try{
+    const hash = await sha256(s);
+    const { data, error } = await supabase.from("painel_admin").select("senha_hash").maybeSingle();
+    if(error || !data){ gateMsg.textContent = "Erro ao verificar."; return; }
+    if(hash === data.senha_hash.toLowerCase()){
+      gate.style.display = "none";
+      showToast("Acesso liberado — carregando dados...");
+      await loadAll();
+    } else { gateMsg.textContent = "Senha incorreta."; }
+  }catch(e){ gateMsg.textContent = "Falha na verificação."; console.error(e); }
+};
 
 /* === Diagnóstico completo === */
 async function loadAll(){
@@ -169,7 +215,6 @@ async function loadAll(){
     console.log("⚠️ ERROR:", error);
 
     if(error) throw error;
-
     allRows = data || [];
     render(allRows);
     showToast("Dados carregados");
@@ -181,7 +226,6 @@ async function loadAll(){
   }
 }
 
-/* === Buscar por ID === */
 btnSearch.onclick = async () => {
   const ids = idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
@@ -197,7 +241,6 @@ btnSearch.onclick = async () => {
     console.log("⚠️ ERROR:", error);
 
     if(error) throw error;
-
     render(data || []);
     showToast("Busca concluída");
   }catch(e){
@@ -211,7 +254,6 @@ btnSearch.onclick = async () => {
 btnClear.onclick = () => { idsBulk.value = ""; allRows = []; render(allRows); };
 btnLoadAll.onclick = loadAll;
 
-/* === Exportar CSV === */
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
   const csv = allRows.map(r => [
