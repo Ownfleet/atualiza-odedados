@@ -44,9 +44,18 @@ textarea{width:100%;min-height:56px;padding:12px 14px;border-radius:12px;border:
 .table-wrap{overflow:auto;border-top:1px solid #f3f4f6}
 table{width:100%;border-collapse:collapse;background:#fff}
 thead th{position:sticky;top:0;background:#fff7f5;padding:12px 14px;text-align:left;border-bottom:1px solid #f1f5f9}
-tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.95rem}
+tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.95rem; vertical-align: top;}
 tbody tr:hover{background:#fffaf8}
 .empty{padding:28px;text-align:center;color:#64748b}
+
+/* cortes/ellipsis por coluna */
+.clip{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block}
+.col-id .clip{max-width:120px}
+.col-nome .clip{max-width:240px}
+.col-ceps .clip{max-width:420px}
+.col-regioes .clip{max-width:380px}
+.col-cidades .clip{max-width:260px}
+.col-veiculo .clip{max-width:120px}
 
 /* modal */
 .backdrop{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);z-index:100}
@@ -64,10 +73,10 @@ tbody tr:hover{background:#fffaf8}
 .toast.show{display:block}
 @media (max-width:640px){
   .header{flex-direction:column;align-items:flex-start;gap:8px}
+  .col-ceps .clip{max-width:220px}
+  .col-regioes .clip{max-width:220px}
+  .col-cidades .clip{max-width:180px}
 }
-
-/* debug box (injetado quando necessário) */
-.debugbox{white-space:pre-wrap;background:rgba(0,0,0,.65);color:#fff;padding:12px;border-radius:10px;font-size:.9rem;margin:12px 18px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
@@ -103,12 +112,12 @@ tbody tr:hover{background:#fffaf8}
       <table id="table">
         <thead>
           <tr>
-            <th style="width:140px">ID</th>
-            <th style="width:220px">Nome</th>
-            <th style="width:200px">CEP(s)</th>
-            <th style="width:280px">Região/Bairro(s)</th>
-            <th style="width:200px">Cidade(s)</th>
-            <th style="width:140px">Veículo</th>
+            <th class="col-id" style="width:140px">ID</th>
+            <th class="col-nome" style="width:220px">Nome</th>
+            <th class="col-ceps" style="width:200px">CEP(s)</th>
+            <th class="col-regioes" style="width:280px">Região/Bairro(s)</th>
+            <th class="col-cidades" style="width:200px">Cidade(s)</th>
+            <th class="col-veiculo" style="width:140px">Veículo</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -129,7 +138,9 @@ tbody tr:hover{background:#fffaf8}
       <button id="btnEnter" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
     </div>
     <div id="gateMsg" class="msg"></div>
-    <p style="margin-top:12px;color:#475569;font-size:.88rem">A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.</p>
+    <p style="margin-top:12px;color:#475569;font-size:.88rem">
+      A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.
+    </p>
   </div>
 </div>
 
@@ -144,40 +155,23 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* === ELEMENTOS === */
-const tbody = document.getElementById("tbody");
-const countEl = document.getElementById("count");
-const idsBulk = document.getElementById("idsBulk");
+const tbody     = document.getElementById("tbody");
+const countEl   = document.getElementById("count");
+const idsBulk   = document.getElementById("idsBulk");
 const btnSearch = document.getElementById("btnSearch");
-const btnClear = document.getElementById("btnClear");
-const btnLoadAll = document.getElementById("btnLoadAll");
+const btnClear  = document.getElementById("btnClear");
+const btnLoadAll= document.getElementById("btnLoadAll");
 const btnExport = document.getElementById("btnExport");
 
-const gate = document.getElementById("gate");
+const gate      = document.getElementById("gate");
 const adminPass = document.getElementById("adminPass");
-const btnEnter = document.getElementById("btnEnter");
-const gateMsg = document.getElementById("gateMsg");
+const btnEnter  = document.getElementById("btnEnter");
+const gateMsg   = document.getElementById("gateMsg");
 
-const toast = document.getElementById("toast");
-const toastMsg = document.getElementById("toastMsg");
+const toast     = document.getElementById("toast");
+const toastMsg  = document.getElementById("toastMsg");
 
-/* === ESTADO === */
 let allRows = [];
-
-/* === DEBUG UI (aparece só quando necessário) === */
-let debugBox;
-function ensureDebugBox(){
-  if(debugBox) return debugBox;
-  const box = document.createElement("pre");
-  box.className = "debugbox";
-  box.textContent = "🛠️ Diagnóstico aparecerá aqui...";
-  document.querySelector(".toolbar").appendChild(box);
-  debugBox = box;
-  return box;
-}
-function logDebug(obj, title="DEBUG"){
-  const box = ensureDebugBox();
-  box.textContent += `\n\n=== ${title} ===\n` + JSON.stringify(obj, null, 2);
-}
 
 /* === UTIL === */
 function showToast(txt){
@@ -189,35 +183,48 @@ function setLoading(btn, on){
   if(on){ btn.dataset.html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…'; }
   else { btn.disabled = false; if(btn.dataset.html) btn.innerHTML = btn.dataset.html; }
 }
+
+/* sumarizador para listas CSV */
+function summarizeCSV(str, maxItems = 3, maxChars = 120){
+  if(!str) return "";
+  const full = String(str);
+  const arr = full.split(",").map(s => s.trim()).filter(Boolean);
+  const head = arr.slice(0, maxItems).join(", ");
+  const extra = arr.length - maxItems;
+  let preview = head + (extra > 0 ? ` … (+${extra})` : "");
+  if(preview.length > maxChars) preview = preview.slice(0, maxChars - 1) + "…";
+  return { preview, full };
+}
+
 function render(rows){
-  try{
-    const arr = Array.isArray(rows) ? rows : [];
-    countEl.textContent = arr.length;
-    tbody.innerHTML = "";
-    if(!arr.length){
-      const tr = document.createElement("tr");
-      tr.className = "empty";
-      tr.innerHTML = `<td colspan="6">Nenhum registro encontrado.</td>`;
-      tbody.appendChild(tr);
-      return;
-    }
-    for(const r of arr){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r?.driver_id ?? ""}</td>
-        <td>${r?.nome ?? ""}</td>
-        <td>${r?.ceps ?? ""}</td>
-        <td>${r?.regioes ?? ""}</td>
-        <td>${r?.cidades ?? ""}</td>
-        <td>${r?.veiculo ?? ""}</td>`;
-      tbody.appendChild(tr);
-    }
-  }catch(e){
-    console.error("Erro no render:", e);
-    alert("Erro ao renderizar: " + (e.message || e));
+  const data = Array.isArray(rows) ? rows : [];
+  countEl.textContent = data.length;
+  tbody.innerHTML = "";
+  if(!data.length){
+    const tr = document.createElement("tr");
+    tr.className = "empty";
+    tr.innerHTML = `<td colspan="6">Nenhum registro encontrado.</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+  for(const r of data){
+    const ceps    = summarizeCSV(r.ceps, 3, 140);
+    const regioes = summarizeCSV(r.regioes, 2, 120);
+    const cidades = summarizeCSV(r.cidades, 2, 100);
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="col-id"><span class="clip" title="${r.driver_id ?? ""}">${r.driver_id ?? ""}</span></td>
+      <td class="col-nome"><span class="clip" title="${r.nome ?? ""}">${r.nome ?? ""}</span></td>
+      <td class="col-ceps"><span class="clip" title="${ceps.full}">${ceps.preview}</span></td>
+      <td class="col-regioes"><span class="clip" title="${regioes.full}">${regioes.preview}</span></td>
+      <td class="col-cidades"><span class="clip" title="${cidades.full}">${cidades.preview}</span></td>
+      <td class="col-veiculo"><span class="clip" title="${r.veiculo ?? ""}">${r.veiculo ?? ""}</span></td>`;
+    tbody.appendChild(tr);
   }
 }
 
-/* === SHA-256 === */
+/* SHA-256 util */
 async function sha256(message){
   const enc = new TextEncoder().encode(message);
   const hash = await crypto.subtle.digest("SHA-256", enc);
@@ -232,7 +239,6 @@ btnEnter.onclick = async () => {
   gateMsg.textContent = "Verificando…";
   try{
     const hash = await sha256(s);
-
     const { data, error } = await supabase
       .from("painel_admin")
       .select("senha_hash")
@@ -242,7 +248,7 @@ btnEnter.onclick = async () => {
     if(hash === String(data.senha_hash).toLowerCase()){
       gate.style.display = "none";
       showToast("Acesso liberado — carregando dados...");
-      await loadAll(); // carrega tudo automaticamente
+      await loadAll();
     } else {
       gateMsg.textContent = "Senha incorreta.";
     }
@@ -252,55 +258,35 @@ btnEnter.onclick = async () => {
   }
 };
 
-/* === AÇÕES DO PAINEL === */
+/* === CARREGAR DADOS (RPC com fallback) === */
 async function loadAll(){
   setLoading(btnLoadAll, true);
   try{
-    // 1) Tenta via RPC (se existir)
+    // tenta RPC (se existir)
     const rpc = await supabase.rpc("listar_atualizar_bairros");
-    console.log("RPC status/data/error:", rpc.status, rpc.data?.length, rpc.error);
-
     if(Array.isArray(rpc.data) && rpc.data.length){
       allRows = rpc.data;
       render(allRows);
-      showToast("Dados carregados (RPC)");
+      showToast("Dados carregados");
       return;
-    } else {
-      logDebug({
-        rpc_status: rpc.status,
-        rpc_error: rpc.error,
-        rpc_sample: (rpc.data || []).slice(0,3)
-      }, "RPC listar_atualizar_bairros");
     }
-
-    // 2) Fallback: SELECT direto
-    const sel = await supabase
+    // fallback: SELECT direto
+    const { data, error } = await supabase
       .from("atualizar_bairros")
       .select("driver_id, nome, ceps, regioes, cidades, veiculo")
       .order("nome", { ascending: true })
       .limit(5000);
-
-    console.log("SELECT status/data/error:", sel.status, sel.data?.length, sel.error);
-    logDebug({
-      select_status: sel.status,
-      select_error: sel.error,
-      select_sample: (sel.data || []).slice(0,3)
-    }, "SELECT atualizar_bairros");
-
-    if(sel.error) throw sel.error;
-
-    allRows = sel.data || [];
+    if(error) throw error;
+    allRows = data || [];
     render(allRows);
-    showToast("Dados carregados (SELECT)");
+    showToast("Dados carregados");
   } catch(e){
     alert("Erro ao carregar: " + (e.message || e));
     console.error(e);
-    logDebug({catch_error_message: e.message, catch_error: e}, "CATCH loadAll");
   } finally {
     setLoading(btnLoadAll, false);
   }
 }
-
 btnLoadAll.onclick = loadAll;
 
 btnSearch.onclick = async () => {
@@ -308,35 +294,27 @@ btnSearch.onclick = async () => {
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
   setLoading(btnSearch, true);
   try{
-    // 1) tenta base via RPC
-    const rpc = await supabase.rpc("listar_atualizar_bairros");
-    if(rpc.error){
-      logDebug({rpc_error: rpc.error}, "RPC error Busca");
-    }
-    let base = Array.isArray(rpc.data) ? rpc.data : [];
-
-    // 2) se vazio, tenta SELECT direto por ids
+    // usa base já carregada se houver; senão busca
+    let base = allRows.length ? allRows : [];
     if(!base.length){
-      const sel = await supabase
-        .from("atualizar_bairros")
-        .select("driver_id, nome, ceps, regioes, cidades, veiculo")
-        .in("driver_id", ids);
-
-      if(sel.error) throw sel.error;
-
-      base = sel.data || [];
-      logDebug({fallback_select_count: base.length, sample: base.slice(0,3)}, "Fallback SELECT Busca");
+      const rpc = await supabase.rpc("listar_atualizar_bairros");
+      base = Array.isArray(rpc.data) && rpc.data.length ? rpc.data : [];
+      if(!base.length){
+        const sel = await supabase
+          .from("atualizar_bairros")
+          .select("driver_id, nome, ceps, regioes, cidades, veiculo")
+          .in("driver_id", ids);
+        if(sel.error) throw sel.error;
+        base = sel.data || [];
+      }
     }
-
     const set = new Set(ids.map(String));
     const filtrados = base.filter(r => set.has(String(r.driver_id)));
-    allRows = filtrados;
-    render(allRows);
+    render(filtrados);
     showToast("Busca concluída");
   } catch(e){
     alert("Erro na busca: " + (e.message || e));
     console.error(e);
-    logDebug({catch_error_message: e.message, catch_error: e}, "CATCH Busca");
   } finally {
     setLoading(btnSearch, false);
   }
@@ -344,13 +322,12 @@ btnSearch.onclick = async () => {
 
 btnClear.onclick = () => {
   idsBulk.value = "";
-  allRows = [];
-  render(allRows);
+  render([]);
 };
 
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
-  // csv sem cabeçalho
+  // csv sem cabeçalho, com dados completos (sem cortes)
   const csv = allRows.map(r => [
     r.driver_id ?? "",
     r.nome ?? "",
