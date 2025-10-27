@@ -48,7 +48,7 @@ tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.95rem; ver
 tbody tr:hover{background:#fffaf8}
 .empty{padding:28px;text-align:center;color:#64748b}
 
-/* cortes/ellipsis por coluna */
+/* cortes/ellipsis */
 .clip{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block}
 .col-id .clip{max-width:120px}
 .col-nome .clip{max-width:240px}
@@ -64,11 +64,7 @@ tbody tr:hover{background:#fffaf8}
 .modal p{margin:0 0 12px;color:#475569}
 .input{width:100%;padding:12px;border-radius:10px;border:1px solid #e6e6e6}
 .msg{margin-top:8px;color:#b00020;font-size:.95rem}
-
-/* small */
 .kbd{background:#eef2ff;border-radius:6px;padding:4px 8px;font-weight:700;color:#0f172a;font-size:.82rem}
-
-/* toast */
 .toast{position:fixed;right:18px;bottom:18px;background:rgba(255,255,255,.96);padding:10px 14px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
 .toast.show{display:block}
 @media (max-width:640px){
@@ -99,8 +95,7 @@ tbody tr:hover{background:#fffaf8}
     </div>
 
     <div class="toolbar">
-      <textarea id="idsBulk" placeholder="IDs separados por vírgula, espaço ou quebra de linha — use para exportar/exibir apenas esses IDs quando quiser."></textarea>
-
+      <textarea id="idsBulk" placeholder="IDs separados por vírgula, espaço ou quebra de linha"></textarea>
       <div class="controls">
         <button id="btnSearch" class="btn btn-blue"><i class="fa-solid fa-search"></i> Buscar</button>
         <button id="btnClear" class="btn btn-gray"><i class="fa-solid fa-eraser"></i> Limpar</button>
@@ -109,26 +104,23 @@ tbody tr:hover{background:#fffaf8}
     </div>
 
     <div class="table-wrap">
-      <table id="table">
+      <table>
         <thead>
           <tr>
-            <th class="col-id" style="width:140px">ID</th>
-            <th class="col-nome" style="width:220px">Nome</th>
-            <th class="col-ceps" style="width:200px">CEP(s)</th>
-            <th class="col-regioes" style="width:280px">Região/Bairro(s)</th>
-            <th class="col-cidades" style="width:200px">Cidade(s)</th>
-            <th class="col-veiculo" style="width:140px">Veículo</th>
+            <th class="col-id">ID</th>
+            <th class="col-nome">Nome</th>
+            <th class="col-ceps">CEP(s)</th>
+            <th class="col-regioes">Região/Bairro(s)</th>
+            <th class="col-cidades">Cidade(s)</th>
+            <th class="col-veiculo">Veículo</th>
           </tr>
         </thead>
-        <tbody id="tbody">
-          <tr class="empty"><td colspan="6">Sem dados. Insira a senha para liberar o painel.</td></tr>
-        </tbody>
+        <tbody id="tbody"><tr class="empty"><td colspan="6">Sem dados. Insira a senha.</td></tr></tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- admin gate -->
 <div class="backdrop" id="gate">
   <div class="modal">
     <h2><i class="fa-solid fa-lock"></i> Acesso Administrativo</h2>
@@ -139,7 +131,7 @@ tbody tr:hover{background:#fffaf8}
     </div>
     <div id="gateMsg" class="msg"></div>
     <p style="margin-top:12px;color:#475569;font-size:.88rem">
-      A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.
+      A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo em <b>painel_admin</b>.
     </p>
   </div>
 </div>
@@ -149,180 +141,66 @@ tbody tr:hover{background:#fffaf8}
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/* === CONFIG SUPABASE === */
-const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL="https://bzbkqvxixxkcmfrhtcxq.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
+const supabase=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 
-/* === ELEMENTOS === */
-const tbody = document.getElementById("tbody");
-const countEl = document.getElementById("count");
-const idsBulk = document.getElementById("idsBulk");
-const btnSearch = document.getElementById("btnSearch");
-const btnClear = document.getElementById("btnClear");
-const btnLoadAll = document.getElementById("btnLoadAll");
-const btnExport = document.getElementById("btnExport");
+const tbody=document.getElementById("tbody");
+const countEl=document.getElementById("count");
+const idsBulk=document.getElementById("idsBulk");
+const btnSearch=document.getElementById("btnSearch");
+const btnClear=document.getElementById("btnClear");
+const btnLoadAll=document.getElementById("btnLoadAll");
+const btnExport=document.getElementById("btnExport");
+const gate=document.getElementById("gate");
+const adminPass=document.getElementById("adminPass");
+const btnEnter=document.getElementById("btnEnter");
+const gateMsg=document.getElementById("gateMsg");
+const toast=document.getElementById("toast");
+const toastMsg=document.getElementById("toastMsg");
+let allRows=[];
 
-const gate = document.getElementById("gate");
-const adminPass = document.getElementById("adminPass");
-const btnEnter = document.getElementById("btnEnter");
-const gateMsg = document.getElementById("gateMsg");
+function showToast(t){toastMsg.textContent=t;toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1400);}
+function setLoading(btn,on){if(on){btn.dataset.html=btn.innerHTML;btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…';}else{btn.disabled=false;if(btn.dataset.html)btn.innerHTML=btn.dataset.html;}}
+function summarizeCSV(str,maxItems=3,maxChars=120){if(!str)return"";const full=String(str);const arr=full.split(",").map(s=>s.trim()).filter(Boolean);const head=arr.slice(0,maxItems).join(", ");const extra=arr.length-maxItems;let preview=head+(extra>0?` … (+${extra})`:"");if(preview.length>maxChars)preview=preview.slice(0,maxChars-1)+"…";return{preview,full};}
 
-const toast = document.getElementById("toast");
-const toastMsg = document.getElementById("toastMsg");
+function render(rows){tbody.innerHTML="";countEl.textContent=rows.length; if(!rows.length){tbody.innerHTML='<tr class="empty"><td colspan="6">Nenhum registro encontrado.</td></tr>';return;}
+for(const r of rows){const ceps=summarizeCSV(r.ceps,3,140);const reg=summarizeCSV(r.regioes,2,120);const cid=summarizeCSV(r.cidades,2,100);
+tbody.insertAdjacentHTML("beforeend",`<tr>
+<td><span class="clip" title="${r.driver_id??""}">${r.driver_id??""}</span></td>
+<td><span class="clip" title="${r.nome??""}">${r.nome??""}</span></td>
+<td><span class="clip" title="${ceps.full}">${ceps.preview}</span></td>
+<td><span class="clip" title="${reg.full}">${reg.preview}</span></td>
+<td><span class="clip" title="${cid.full}">${cid.preview}</span></td>
+<td><span class="clip" title="${r.veiculo??""}">${r.veiculo??""}</span></td>
+</tr>`);}}
 
-let allRows = [];
+async function sha256(msg){const enc=new TextEncoder().encode(msg);const hash=await crypto.subtle.digest("SHA-256",enc);return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");}
 
-/* === UTIL === */
-function showToast(txt){
-  toastMsg.textContent = txt;
-  toast.classList.add("show");
-  setTimeout(()=> toast.classList.remove("show"), 1400);
-}
-function setLoading(btn, on){
-  if(on){ btn.dataset.html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…'; }
-  else { btn.disabled = false; if(btn.dataset.html) btn.innerHTML = btn.dataset.html; }
-}
-function summarizeCSV(str, maxItems = 3, maxChars = 120){
-  if(!str) return "";
-  const full = String(str);
-  const arr = full.split(",").map(s => s.trim()).filter(Boolean);
-  const head = arr.slice(0, maxItems).join(", ");
-  const extra = arr.length - maxItems;
-  let preview = head + (extra > 0 ? ` … (+${extra})` : "");
-  if(preview.length > maxChars) preview = preview.slice(0, maxChars - 1) + "…";
-  return { preview, full };
-}
+btnEnter.onclick=async()=>{const s=(adminPass.value||"").trim();if(!s){gateMsg.textContent="Digite a senha.";return;}gateMsg.textContent="Verificando…";try{const hash=await sha256(s);const{data,error}=await supabase.from("painel_admin").select("senha_hash").maybeSingle();if(error||!data){gateMsg.textContent="Erro ao verificar.";return;}if(hash===String(data.senha_hash).toLowerCase()){gate.style.display="none";showToast("Acesso liberado");await loadAll();}else{gateMsg.textContent="Senha incorreta."}}catch(e){gateMsg.textContent="Falha na verificação.";console.error(e);}};
 
-/* === RENDER === */
-function render(rows){
-  const data = Array.isArray(rows) ? rows : [];
-  countEl.textContent = data.length;
-  tbody.innerHTML = "";
-  if(!data.length){
-    const tr = document.createElement("tr");
-    tr.className = "empty";
-    tr.innerHTML = `<td colspan="6">Nenhum registro encontrado.</td>`;
-    tbody.appendChild(tr);
-    return;
-  }
-  for(const r of data){
-    const ceps    = summarizeCSV(r.ceps, 3, 140);
-    const regioes = summarizeCSV(r.regioes, 2, 120);
-    const cidades = summarizeCSV(r.cidades, 2, 100);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="col-id"><span class="clip" title="${r.driver_id ?? ""}">${r.driver_id ?? ""}</span></td>
-      <td class="col-nome"><span class="clip" title="${r.nome ?? ""}">${r.nome ?? ""}</span></td>
-      <td class="col-ceps"><span class="clip" title="${ceps.full}">${ceps.preview}</span></td>
-      <td class="col-regioes"><span class="clip" title="${regioes.full}">${regioes.preview}</span></td>
-      <td class="col-cidades"><span class="clip" title="${cidades.full}">${cidades.preview}</span></td>
-      <td class="col-veiculo"><span class="clip" title="${r.veiculo ?? ""}">${r.veiculo ?? ""}</span></td>`;
-    tbody.appendChild(tr);
-  }
-}
+async function loadAll(){setLoading(btnLoadAll,true);try{
+const rpc=await supabase.rpc("listar_atualizar_bairros");
+if(Array.isArray(rpc.data)&&rpc.data.length){allRows=rpc.data;render(allRows);showToast("Dados carregados");return;}
+const{data,error}=await supabase.from("atualizar_bairros").select("driver_id,nome,ceps,regioes,cidades,veiculo").order("nome",{ascending:true}).limit(5000);
+if(error)throw error;allRows=data||[];render(allRows);showToast("Dados carregados");
+}catch(e){console.error(e);alert("Erro ao carregar: "+(e.message||e));}finally{setLoading(btnLoadAll,false);}}
+btnLoadAll.onclick=loadAll;
 
-/* SHA256 */
-async function sha256(message){
-  const enc = new TextEncoder().encode(message);
-  const hash = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
+btnSearch.onclick=async()=>{const ids=idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);if(!ids.length){alert("Informe ao menos um ID.");return;}setLoading(btnSearch,true);
+try{let base=allRows.length?allRows:[];if(!base.length){const rpc=await supabase.rpc("listar_atualizar_bairros");base=Array.isArray(rpc.data)&&rpc.data.length?rpc.data:[];}
+const set=new Set(ids.map(String));const filtrados=base.filter(r=>set.has(String(r.driver_id)));render(filtrados);showToast("Busca concluída");}
+catch(e){alert("Erro na busca: "+(e.message||e));console.error(e);}finally{setLoading(btnSearch,false);}};
 
-/* LOGIN */
-btnEnter.onclick = async () => {
-  const s = (adminPass.value || "").trim();
-  gateMsg.textContent = "";
-  if(!s){ gateMsg.textContent = "Digite a senha."; return; }
-  gateMsg.textContent = "Verificando…";
-  try{
-    const hash = await sha256(s);
-    const { data, error } = await supabase
-      .from("painel_admin")
-      .select("senha_hash")
-      .maybeSingle();
-    if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
-    if(hash === String(data.senha_hash).toLowerCase()){
-      gate.style.display = "none";
-      showToast("Acesso liberado — carregando dados...");
-      await loadAll();
-    } else {
-      gateMsg.textContent = "Senha incorreta.";
-    }
-  } catch(e){
-    console.error(e);
-    gateMsg.textContent = "Falha na verificação.";
-  }
-};
-
-/* CARREGAR */
-async function loadAll(){
-  setLoading(btnLoadAll,true);
-  try{
-    const { data, error } = await supabase
-      .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidades, veiculo")
-      .order("nome",{ascending:true})
-      .limit(5000);
-    if(error) throw error;
-    allRows = data || [];
-    render(allRows);
-    showToast("Dados carregados");
-  }catch(e){
-    alert("Erro ao carregar: "+(e.message||e));
-    console.error(e);
-  }finally{
-    setLoading(btnLoadAll,false);
-  }
-}
-btnLoadAll.onclick = loadAll;
-
-/* BUSCAR */
-btnSearch.onclick = async()=>{
-  const ids=idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
-  if(!ids.length){alert("Informe ao menos um ID.");return;}
-  setLoading(btnSearch,true);
-  try{
-    const { data, error }=await supabase
-      .from("atualizar_bairros")
-      .select("driver_id,nome,ceps,regioes,cidades,veiculo")
-      .in("driver_id",ids);
-    if(error)throw error;
-    allRows=data||[];
-    render(allRows);
-    showToast("Busca concluída");
-  }catch(e){alert("Erro na busca: "+(e.message||e));}
-  finally{setLoading(btnSearch,false);}
-};
-
-/* LIMPAR */
 btnClear.onclick=()=>{idsBulk.value="";render([]);};
 
-/* EXPORTAÇÃO UTF-8 FIX */
-btnExport.onclick=()=>{
-  if(!allRows.length){alert("Nada para exportar.");return;}
-  const header=["driver_id","nome","ceps","regioes","cidades","veiculo"];
-  const csv=[
-    header.join(","),
-    ...allRows.map(r=>[
-      r.driver_id??"",
-      r.nome??"",
-      r.ceps??"",
-      r.regioes??"",
-      r.cidades??"",
-      r.veiculo??""
-    ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","))
-  ].join("\n");
-
-  // 🔥 Fix Excel UTF-8
-  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
-  a.download=`motoristas_${stamp}.csv`;
-  a.click();
-  showToast("CSV exportado (UTF-8 fixado)");
-};
+btnExport.onclick=()=>{if(!allRows.length){alert("Nada para exportar.");return;}
+const header=["driver_id","nome","ceps","regioes","cidades","veiculo"];
+const csv=[header.join(","),...allRows.map(r=>[r.driver_id??"",r.nome??"",r.ceps??"",r.regioes??"",r.cidades??"",r.veiculo??""].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","))].join("\n");
+const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+a.download=`motoristas_${new Date().toISOString().slice(0,19).replace(/[:T]/g,"-")}.csv`;
+a.click();showToast("CSV exportado (UTF-8 fixado)");};
 </script>
 </body>
 </html>
