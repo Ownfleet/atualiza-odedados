@@ -168,7 +168,7 @@ const toastMsg = document.getElementById("toastMsg");
 
 let allRows = [];
 
-/* === FUNÇÕES === */
+/* === UTIL === */
 function showToast(txt){
   toastMsg.textContent = txt;
   toast.classList.add("show");
@@ -182,13 +182,14 @@ function render(rows){
     return;
   }
   for(const r of rows){
+    const cidade = r.cidade ?? r.cidades ?? "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.driver_id ?? ""}</td>
       <td>${r.nome ?? ""}</td>
       <td>${r.ceps ?? ""}</td>
       <td>${r.regioes ?? ""}</td>
-      <td>${r.cidade ?? ""}</td>
+      <td>${cidade}</td>
       <td>${r.veiculo ?? ""}</td>`;
     tbody.appendChild(tr);
   }
@@ -206,7 +207,10 @@ btnEnter.onclick = async () => {
   gateMsg.textContent = "Verificando…";
   try{
     const hash = await sha256(s);
-    const { data, error } = await supabase.from("painel_admin").select("senha_hash").maybeSingle();
+    const { data, error } = await supabase
+      .from("painel_admin")
+      .select("senha_hash")
+      .maybeSingle();
     if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
     if(hash === data.senha_hash.toLowerCase()){
       gate.style.display = "none";
@@ -222,9 +226,8 @@ async function loadAll(){
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidade, veiculo")
+      .select("*")                       // <- trás todas as colunas
       .order("nome", { ascending: true });
-
     if(error) throw error;
     allRows = data || [];
     render(allRows);
@@ -233,7 +236,7 @@ async function loadAll(){
   finally{ overlay.classList.remove("show"); }
 }
 
-/* === BUSCAR POR ID === */
+/* === BUSCAR POR IDs === */
 btnSearch.onclick = async () => {
   const ids = idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
@@ -241,10 +244,11 @@ btnSearch.onclick = async () => {
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidade, veiculo")
+      .select("*")                       // <- idem aqui
       .in("driver_id", ids);
     if(error) throw error;
-    render(data || []);
+    allRows = data || [];
+    render(allRows);
     showToast("Busca concluída");
   }catch(e){ alert("Erro na busca: " + (e.message || e)); }
   finally{ overlay.classList.remove("show"); }
@@ -255,9 +259,12 @@ btnClear.onclick = () => { idsBulk.value = ""; allRows = []; render(allRows); };
 /* === EXPORTAR CSV === */
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
-  const csv = allRows.map(r => [
-    r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", r.cidade ?? "", r.veiculo ?? ""
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const csv = allRows.map(r => {
+    const cidade = r.cidade ?? r.cidades ?? "";
+    return [
+      r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", cidade, r.veiculo ?? ""
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",");
+  }).join("\n");
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -266,6 +273,10 @@ btnExport.onclick = () => {
   a.click();
   showToast("CSV exportado");
 };
+
+/* Botões */
+btnLoadAll.onclick = loadAll;
+btnClear.onclick = () => { idsBulk.value=""; allRows=[]; render(allRows); };
 </script>
 </body>
 </html>
