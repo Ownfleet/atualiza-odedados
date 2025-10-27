@@ -174,10 +174,6 @@ function showToast(txt){
   toast.classList.add("show");
   setTimeout(()=> toast.classList.remove("show"), 1500);
 }
-function setLoading(btn, on){
-  if(on){ btn.dataset.html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…'; }
-  else { btn.disabled = false; if(btn.dataset.html) btn.innerHTML = btn.dataset.html; }
-}
 function render(rows){
   countEl.textContent = rows.length;
   tbody.innerHTML = "";
@@ -192,7 +188,7 @@ function render(rows){
       <td>${r.nome ?? ""}</td>
       <td>${r.ceps ?? ""}</td>
       <td>${r.regioes ?? ""}</td>
-      <td>${r.cidades ?? ""}</td>
+      <td>${r.cidade ?? ""}</td>
       <td>${r.veiculo ?? ""}</td>`;
     tbody.appendChild(tr);
   }
@@ -226,8 +222,9 @@ async function loadAll(){
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidades, veiculo")
+      .select("driver_id, nome, ceps, regioes, cidade, veiculo")
       .order("nome", { ascending: true });
+
     if(error) throw error;
     allRows = data || [];
     render(allRows);
@@ -236,7 +233,7 @@ async function loadAll(){
   finally{ overlay.classList.remove("show"); }
 }
 
-/* === BUSCAR ID === */
+/* === BUSCAR POR ID === */
 btnSearch.onclick = async () => {
   const ids = idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
@@ -244,7 +241,7 @@ btnSearch.onclick = async () => {
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidades, veiculo")
+      .select("driver_id, nome, ceps, regioes, cidade, veiculo")
       .in("driver_id", ids);
     if(error) throw error;
     render(data || []);
@@ -259,7 +256,7 @@ btnClear.onclick = () => { idsBulk.value = ""; allRows = []; render(allRows); };
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
   const csv = allRows.map(r => [
-    r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", r.cidades ?? "", r.veiculo ?? ""
+    r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", r.cidade ?? "", r.veiculo ?? ""
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
