@@ -60,9 +60,6 @@ tbody tr:hover{background:#fffaf8}
 .overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;display:none;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#ee4d2d}
 .overlay.show{display:flex}
 
-/* small */
-.kbd{background:#eef2ff;border-radius:6px;padding:4px 8px;font-weight:700;color:#0f172a;font-size:.82rem}
-
 /* toast */
 .toast{position:fixed;right:18px;bottom:18px;background:rgba(255,255,255,.96);padding:10px 14px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
 .toast.show{display:block}
@@ -106,12 +103,12 @@ tbody tr:hover{background:#fffaf8}
       <table id="table">
         <thead>
           <tr>
-            <th style="width:140px">ID</th>
-            <th style="width:220px">Nome</th>
-            <th style="width:200px">CEP(s)</th>
-            <th style="width:280px">Região/Bairro(s)</th>
-            <th style="width:200px">Cidade(s)</th>
-            <th style="width:140px">Veículo</th>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>CEP(s)</th>
+            <th>Região/Bairro(s)</th>
+            <th>Cidade(s)</th>
+            <th>Veículo</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -143,12 +140,10 @@ tbody tr:hover{background:#fffaf8}
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-/* === CONFIG SUPABASE === */
 const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* === ELEMENTOS === */
 const tbody = document.getElementById("tbody");
 const countEl = document.getElementById("count");
 const idsBulk = document.getElementById("idsBulk");
@@ -157,23 +152,20 @@ const btnClear = document.getElementById("btnClear");
 const btnLoadAll = document.getElementById("btnLoadAll");
 const btnExport = document.getElementById("btnExport");
 const overlay = document.getElementById("overlay");
-
 const gate = document.getElementById("gate");
 const adminPass = document.getElementById("adminPass");
 const btnEnter = document.getElementById("btnEnter");
 const gateMsg = document.getElementById("gateMsg");
-
 const toast = document.getElementById("toast");
 const toastMsg = document.getElementById("toastMsg");
-
 let allRows = [];
 
-/* === UTIL === */
 function showToast(txt){
   toastMsg.textContent = txt;
   toast.classList.add("show");
   setTimeout(()=> toast.classList.remove("show"), 1500);
 }
+
 function render(rows){
   countEl.textContent = rows.length;
   tbody.innerHTML = "";
@@ -182,36 +174,32 @@ function render(rows){
     return;
   }
   for(const r of rows){
-    const cidade = r.cidade ?? r.cidades ?? "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.driver_id ?? ""}</td>
       <td>${r.nome ?? ""}</td>
       <td>${r.ceps ?? ""}</td>
       <td>${r.regioes ?? ""}</td>
-      <td>${cidade}</td>
+      <td>${r.cidades ?? ""}</td>
       <td>${r.veiculo ?? ""}</td>`;
     tbody.appendChild(tr);
   }
 }
+
 async function sha256(message){
   const enc = new TextEncoder().encode(message);
   const hash = await crypto.subtle.digest("SHA-256", enc);
   return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
-/* === LOGIN ADMIN === */
 btnEnter.onclick = async () => {
   const s = adminPass.value.trim();
   if(!s){ gateMsg.textContent = "Digite a senha."; return; }
   gateMsg.textContent = "Verificando…";
   try{
     const hash = await sha256(s);
-    const { data, error } = await supabase
-      .from("painel_admin")
-      .select("senha_hash")
-      .maybeSingle();
-    if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
+    const { data, error } = await supabase.from("painel_admin").select("senha_hash").maybeSingle();
+    if(error || !data){ gateMsg.textContent = "Erro ao verificar."; return; }
     if(hash === data.senha_hash.toLowerCase()){
       gate.style.display = "none";
       showToast("Acesso liberado — carregando dados...");
@@ -220,13 +208,12 @@ btnEnter.onclick = async () => {
   }catch(e){ gateMsg.textContent = "Falha na verificação."; console.error(e); }
 };
 
-/* === CARREGAR TABELA === */
 async function loadAll(){
   overlay.classList.add("show");
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
-      .select("*")                       // <- trás todas as colunas
+      .select("driver_id, nome, ceps, regioes, cidades, veiculo")
       .order("nome", { ascending: true });
     if(error) throw error;
     allRows = data || [];
@@ -236,7 +223,6 @@ async function loadAll(){
   finally{ overlay.classList.remove("show"); }
 }
 
-/* === BUSCAR POR IDs === */
 btnSearch.onclick = async () => {
   const ids = idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
@@ -244,11 +230,10 @@ btnSearch.onclick = async () => {
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
-      .select("*")                       // <- idem aqui
+      .select("driver_id, nome, ceps, regioes, cidades, veiculo")
       .in("driver_id", ids);
     if(error) throw error;
-    allRows = data || [];
-    render(allRows);
+    render(data || []);
     showToast("Busca concluída");
   }catch(e){ alert("Erro na busca: " + (e.message || e)); }
   finally{ overlay.classList.remove("show"); }
@@ -256,15 +241,11 @@ btnSearch.onclick = async () => {
 
 btnClear.onclick = () => { idsBulk.value = ""; allRows = []; render(allRows); };
 
-/* === EXPORTAR CSV === */
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
-  const csv = allRows.map(r => {
-    const cidade = r.cidade ?? r.cidades ?? "";
-    return [
-      r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", cidade, r.veiculo ?? ""
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",");
-  }).join("\n");
+  const csv = allRows.map(r => [
+    r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", r.cidades ?? "", r.veiculo ?? ""
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -274,9 +255,7 @@ btnExport.onclick = () => {
   showToast("CSV exportado");
 };
 
-/* Botões */
 btnLoadAll.onclick = loadAll;
-btnClear.onclick = () => { idsBulk.value=""; allRows=[]; render(allRows); };
 </script>
 </body>
 </html>
