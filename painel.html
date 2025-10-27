@@ -56,6 +56,10 @@ tbody tr:hover{background:#fffaf8}
 .input{width:100%;padding:12px;border-radius:10px;border:1px solid #e6e6e6}
 .msg{margin-top:8px;color:#b00020;font-size:.95rem}
 
+/* loading overlay */
+.overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;display:none;align-items:center;justify-content:center;font-weight:700;font-size:1.2rem;color:#ee4d2d}
+.overlay.show{display:flex}
+
 /* small */
 .kbd{background:#eef2ff;border-radius:6px;padding:4px 8px;font-weight:700;color:#0f172a;font-size:.82rem}
 
@@ -68,6 +72,8 @@ tbody tr:hover{background:#fffaf8}
 </style>
 </head>
 <body>
+
+<div class="overlay" id="overlay"><i class="fa-solid fa-circle-notch fa-spin" style="margin-right:10px"></i>Carregando dados...</div>
 
 <div class="container">
   <div class="card">
@@ -150,6 +156,7 @@ const btnSearch = document.getElementById("btnSearch");
 const btnClear = document.getElementById("btnClear");
 const btnLoadAll = document.getElementById("btnLoadAll");
 const btnExport = document.getElementById("btnExport");
+const overlay = document.getElementById("overlay");
 
 const gate = document.getElementById("gate");
 const adminPass = document.getElementById("adminPass");
@@ -161,11 +168,11 @@ const toastMsg = document.getElementById("toastMsg");
 
 let allRows = [];
 
-/* === FUNÇÕES DE SUPORTE === */
+/* === FUNÇÕES === */
 function showToast(txt){
   toastMsg.textContent = txt;
   toast.classList.add("show");
-  setTimeout(()=> toast.classList.remove("show"), 1400);
+  setTimeout(()=> toast.classList.remove("show"), 1500);
 }
 function setLoading(btn, on){
   if(on){ btn.dataset.html = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Aguarde…'; }
@@ -175,15 +182,13 @@ function render(rows){
   countEl.textContent = rows.length;
   tbody.innerHTML = "";
   if(!rows.length){
-    const tr = document.createElement("tr");
-    tr.className = "empty";
-    tr.innerHTML = `<td colspan="6">Nenhum registro encontrado.</td>`;
-    tbody.appendChild(tr);
+    tbody.innerHTML = `<tr class="empty"><td colspan="6">Nenhum registro encontrado.</td></tr>`;
     return;
   }
   for(const r of rows){
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.driver_id ?? ""}</td>
+    tr.innerHTML = `
+      <td>${r.driver_id ?? ""}</td>
       <td>${r.nome ?? ""}</td>
       <td>${r.ceps ?? ""}</td>
       <td>${r.regioes ?? ""}</td>
@@ -192,107 +197,71 @@ function render(rows){
     tbody.appendChild(tr);
   }
 }
-
-/* === SHA-256 === */
 async function sha256(message){
   const enc = new TextEncoder().encode(message);
   const hash = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
 /* === LOGIN ADMIN === */
 btnEnter.onclick = async () => {
-  const s = (adminPass.value || "").trim();
-  gateMsg.textContent = "";
+  const s = adminPass.value.trim();
   if(!s){ gateMsg.textContent = "Digite a senha."; return; }
-
   gateMsg.textContent = "Verificando…";
-
   try{
     const hash = await sha256(s);
-
-    const { data, error } = await supabase
-      .from("painel_admin")
-      .select("senha_hash")
-      .single(); // 👈 Corrigido (sem limit)
-
+    const { data, error } = await supabase.from("painel_admin").select("senha_hash").maybeSingle();
     if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
-
-    if(hash === data.senha_hash.toLowerCase()){ // 👈 compara minúsculo
+    if(hash === data.senha_hash.toLowerCase()){
       gate.style.display = "none";
       showToast("Acesso liberado — carregando dados...");
       await loadAll();
-    } else {
-      gateMsg.textContent = "Senha incorreta.";
-    }
-  } catch(e){
-    console.error(e);
-    gateMsg.textContent = "Falha na verificação.";
-  }
+    } else { gateMsg.textContent = "Senha incorreta."; }
+  }catch(e){ gateMsg.textContent = "Falha na verificação."; console.error(e); }
 };
 
 /* === CARREGAR TABELA === */
 async function loadAll(){
-  setLoading(btnLoadAll, true);
+  overlay.classList.add("show");
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
       .select("driver_id, nome, ceps, regioes, cidades, veiculo")
-      .order("nome", { ascending: true })
-      .limit(5000);
+      .order("nome", { ascending: true });
     if(error) throw error;
     allRows = data || [];
     render(allRows);
     showToast("Dados carregados");
-  } catch(e){
-    alert("Erro ao carregar: " + (e.message || e));
-  } finally {
-    setLoading(btnLoadAll, false);
-  }
+  }catch(e){ alert("Erro ao carregar: " + (e.message || e)); }
+  finally{ overlay.classList.remove("show"); }
 }
 
-btnLoadAll.onclick = loadAll;
-
+/* === BUSCAR ID === */
 btnSearch.onclick = async () => {
   const ids = idsBulk.value.split(/[\s,;,]+/).map(s=>s.trim()).filter(Boolean);
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
-  setLoading(btnSearch, true);
+  overlay.classList.add("show");
   try{
     const { data, error } = await supabase
       .from("atualizar_bairros")
       .select("driver_id, nome, ceps, regioes, cidades, veiculo")
       .in("driver_id", ids);
     if(error) throw error;
-    allRows = data || [];
-    render(allRows);
+    render(data || []);
     showToast("Busca concluída");
-  } catch(e){
-    alert("Erro na busca: " + (e.message || e));
-  } finally {
-    setLoading(btnSearch, false);
-  }
+  }catch(e){ alert("Erro na busca: " + (e.message || e)); }
+  finally{ overlay.classList.remove("show"); }
 };
 
-btnClear.onclick = () => {
-  idsBulk.value = "";
-  allRows = [];
-  render(allRows);
-};
+btnClear.onclick = () => { idsBulk.value = ""; allRows = []; render(allRows); };
 
+/* === EXPORTAR CSV === */
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
   const csv = allRows.map(r => [
-    r.driver_id ?? "",
-    r.nome ?? "",
-    r.ceps ?? "",
-    r.regioes ?? "",
-    r.cidades ?? "",
-    r.veiculo ?? ""
+    r.driver_id ?? "", r.nome ?? "", r.ceps ?? "", r.regioes ?? "", r.cidades ?? "", r.veiculo ?? ""
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-
-  const blob = new Blob([csv], {type: "text/csv;charset=utf-8"});
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
