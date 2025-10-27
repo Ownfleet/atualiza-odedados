@@ -65,6 +65,9 @@ tbody tr:hover{background:#fffaf8}
 @media (max-width:640px){
   .header{flex-direction:column;align-items:flex-start;gap:8px}
 }
+
+/* debug box (injetado quando necessário) */
+.debugbox{white-space:pre-wrap;background:rgba(0,0,0,.65);color:#fff;padding:12px;border-radius:10px;font-size:.9rem;margin:12px 18px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
 </style>
 </head>
 <body>
@@ -157,7 +160,24 @@ const gateMsg = document.getElementById("gateMsg");
 const toast = document.getElementById("toast");
 const toastMsg = document.getElementById("toastMsg");
 
+/* === ESTADO === */
 let allRows = [];
+
+/* === DEBUG UI (aparece só quando necessário) === */
+let debugBox;
+function ensureDebugBox(){
+  if(debugBox) return debugBox;
+  const box = document.createElement("pre");
+  box.className = "debugbox";
+  box.textContent = "🛠️ Diagnóstico aparecerá aqui...";
+  document.querySelector(".toolbar").appendChild(box);
+  debugBox = box;
+  return box;
+}
+function logDebug(obj, title="DEBUG"){
+  const box = ensureDebugBox();
+  box.textContent += `\n\n=== ${title} ===\n` + JSON.stringify(obj, null, 2);
+}
 
 /* === UTIL === */
 function showToast(txt){
@@ -197,7 +217,7 @@ function render(rows){
   }
 }
 
-/* SHA-256 util */
+/* === SHA-256 === */
 async function sha256(message){
   const enc = new TextEncoder().encode(message);
   const hash = await crypto.subtle.digest("SHA-256", enc);
@@ -216,7 +236,7 @@ btnEnter.onclick = async () => {
     const { data, error } = await supabase
       .from("painel_admin")
       .select("senha_hash")
-      .maybeSingle(); // aceita vazio sem quebrar
+      .maybeSingle();
 
     if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
     if(hash === String(data.senha_hash).toLowerCase()){
@@ -236,24 +256,46 @@ btnEnter.onclick = async () => {
 async function loadAll(){
   setLoading(btnLoadAll, true);
   try{
-    const { data, error, status } = await supabase
+    // 1) Tenta via RPC (se existir)
+    const rpc = await supabase.rpc("listar_atualizar_bairros");
+    console.log("RPC status/data/error:", rpc.status, rpc.data?.length, rpc.error);
+
+    if(Array.isArray(rpc.data) && rpc.data.length){
+      allRows = rpc.data;
+      render(allRows);
+      showToast("Dados carregados (RPC)");
+      return;
+    } else {
+      logDebug({
+        rpc_status: rpc.status,
+        rpc_error: rpc.error,
+        rpc_sample: (rpc.data || []).slice(0,3)
+      }, "RPC listar_atualizar_bairros");
+    }
+
+    // 2) Fallback: SELECT direto
+    const sel = await supabase
       .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidades, veiculo") // <- campos certos
+      .select("driver_id, nome, ceps, regioes, cidades, veiculo")
       .order("nome", { ascending: true })
       .limit(5000);
 
-    // DEBUG mínimo
-    console.log("📡 STATUS:", status);
-    console.log("📋 DATA (amostra):", Array.isArray(data) ? data.slice(0,3) : data);
-    console.log("⚠️ ERROR:", error);
+    console.log("SELECT status/data/error:", sel.status, sel.data?.length, sel.error);
+    logDebug({
+      select_status: sel.status,
+      select_error: sel.error,
+      select_sample: (sel.data || []).slice(0,3)
+    }, "SELECT atualizar_bairros");
 
-    if(error) throw error;
-    allRows = data || [];
+    if(sel.error) throw sel.error;
+
+    allRows = sel.data || [];
     render(allRows);
-    showToast("Dados carregados");
+    showToast("Dados carregados (SELECT)");
   } catch(e){
     alert("Erro ao carregar: " + (e.message || e));
     console.error(e);
+    logDebug({catch_error_message: e.message, catch_error: e}, "CATCH loadAll");
   } finally {
     setLoading(btnLoadAll, false);
   }
@@ -266,23 +308,35 @@ btnSearch.onclick = async () => {
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
   setLoading(btnSearch, true);
   try{
-    const { data, error, status } = await supabase
-      .from("atualizar_bairros")
-      .select("driver_id, nome, ceps, regioes, cidades, veiculo") // <- campos certos
-      .in("driver_id", ids);
+    // 1) tenta base via RPC
+    const rpc = await supabase.rpc("listar_atualizar_bairros");
+    if(rpc.error){
+      logDebug({rpc_error: rpc.error}, "RPC error Busca");
+    }
+    let base = Array.isArray(rpc.data) ? rpc.data : [];
 
-    // DEBUG mínimo
-    console.log("🔎 STATUS:", status);
-    console.log("🔎 DATA (amostra):", Array.isArray(data) ? data.slice(0,3) : data);
-    console.log("🔎 ERROR:", error);
+    // 2) se vazio, tenta SELECT direto por ids
+    if(!base.length){
+      const sel = await supabase
+        .from("atualizar_bairros")
+        .select("driver_id, nome, ceps, regioes, cidades, veiculo")
+        .in("driver_id", ids);
 
-    if(error) throw error;
-    allRows = data || [];
+      if(sel.error) throw sel.error;
+
+      base = sel.data || [];
+      logDebug({fallback_select_count: base.length, sample: base.slice(0,3)}, "Fallback SELECT Busca");
+    }
+
+    const set = new Set(ids.map(String));
+    const filtrados = base.filter(r => set.has(String(r.driver_id)));
+    allRows = filtrados;
     render(allRows);
     showToast("Busca concluída");
   } catch(e){
     alert("Erro na busca: " + (e.message || e));
     console.error(e);
+    logDebug({catch_error_message: e.message, catch_error: e}, "CATCH Busca");
   } finally {
     setLoading(btnSearch, false);
   }
