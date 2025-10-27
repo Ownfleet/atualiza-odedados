@@ -126,7 +126,9 @@ tbody tr:hover{background:#fffaf8}
       <button id="btnEnter" class="btn btn-primary"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
     </div>
     <div id="gateMsg" class="msg"></div>
-    <p style="margin-top:12px;color:#475569;font-size:.88rem">A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.</p>
+    <p style="margin-top:12px;color:#475569;font-size:.88rem">
+      A senha é verificada via <span class="kbd">SHA-256</span> comparando com o hash salvo na tabela <b>painel_admin</b>.
+    </p>
   </div>
 </div>
 
@@ -140,26 +142,26 @@ const SUPABASE_URL = "https://bzbkqvxixxkcmfrhtcxq.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* === ELEMENTS === */
-const tbody     = document.getElementById("tbody");
-const countEl   = document.getElementById("count");
-const idsBulk   = document.getElementById("idsBulk");
+/* === ELEMENTOS === */
+const tbody = document.getElementById("tbody");
+const countEl = document.getElementById("count");
+const idsBulk = document.getElementById("idsBulk");
 const btnSearch = document.getElementById("btnSearch");
-const btnClear  = document.getElementById("btnClear");
-const btnLoadAll= document.getElementById("btnLoadAll");
+const btnClear = document.getElementById("btnClear");
+const btnLoadAll = document.getElementById("btnLoadAll");
 const btnExport = document.getElementById("btnExport");
 
-const gate      = document.getElementById("gate");
+const gate = document.getElementById("gate");
 const adminPass = document.getElementById("adminPass");
-const btnEnter  = document.getElementById("btnEnter");
-const gateMsg   = document.getElementById("gateMsg");
+const btnEnter = document.getElementById("btnEnter");
+const gateMsg = document.getElementById("gateMsg");
 
-const toast     = document.getElementById("toast");
-const toastMsg  = document.getElementById("toastMsg");
+const toast = document.getElementById("toast");
+const toastMsg = document.getElementById("toastMsg");
 
 let allRows = [];
 
-/* === UTIL === */
+/* === FUNÇÕES DE SUPORTE === */
 function showToast(txt){
   toastMsg.textContent = txt;
   toast.classList.add("show");
@@ -191,37 +193,37 @@ function render(rows){
   }
 }
 
-/* SHA-256 util */
+/* === SHA-256 === */
 async function sha256(message){
   const enc = new TextEncoder().encode(message);
   const hash = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-/* === ADMIN GATE ===
-   - verifica hash em painel_admin.senha_hash (single row)
-   - ao validar: fecha modal e carrega todos via loadAll()
-*/
+/* === LOGIN ADMIN === */
 btnEnter.onclick = async () => {
   const s = (adminPass.value || "").trim();
   gateMsg.textContent = "";
   if(!s){ gateMsg.textContent = "Digite a senha."; return; }
+
   gateMsg.textContent = "Verificando…";
+
   try{
     const hash = await sha256(s);
 
-    // pega o hash salvo no supabase (tabela painel_admin, coluna senha_hash)
     const { data, error } = await supabase
       .from("painel_admin")
       .select("senha_hash")
-      .limit(1)
-      .single();
+      .single(); // 👈 Corrigido (sem limit)
 
     if(error || !data){ gateMsg.textContent = "Erro ao verificar (verifique painel_admin)."; return; }
-    if(hash === data.senha_hash){
+
+    if(hash === data.senha_hash.toLowerCase()){ // 👈 compara minúsculo
       gate.style.display = "none";
       showToast("Acesso liberado — carregando dados...");
-      await loadAll(); // carrega tudo automaticamente
+      await loadAll();
     } else {
       gateMsg.textContent = "Senha incorreta.";
     }
@@ -231,7 +233,7 @@ btnEnter.onclick = async () => {
   }
 };
 
-/* === AÇÕES DO PAINEL === */
+/* === CARREGAR TABELA === */
 async function loadAll(){
   setLoading(btnLoadAll, true);
   try{
@@ -246,7 +248,6 @@ async function loadAll(){
     showToast("Dados carregados");
   } catch(e){
     alert("Erro ao carregar: " + (e.message || e));
-    console.error(e);
   } finally {
     setLoading(btnLoadAll, false);
   }
@@ -282,7 +283,6 @@ btnClear.onclick = () => {
 
 btnExport.onclick = () => {
   if(!allRows.length){ alert("Nada para exportar."); return; }
-  // csv sem cabeçalho
   const csv = allRows.map(r => [
     r.driver_id ?? "",
     r.nome ?? "",
@@ -300,13 +300,6 @@ btnExport.onclick = () => {
   a.click();
   showToast("CSV exportado");
 };
-
-/* Ao abrir a página: modal bloqueando até admin validar */
-/* Se desejar testar sem modal, comente a linha abaixo (gate.style.display = "none") */
-// gate.style.display = "grid"; // já está visível por padrão no HTML
-
-// opcional: tentar carregar automaticamente se a tabela painel_admin estiver vazia ou for pública
-// (por segurança, eu não forcei loadAll aqui — o comportamento correto é exigir a senha)
 </script>
 </body>
 </html>
