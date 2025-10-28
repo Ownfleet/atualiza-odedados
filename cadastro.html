@@ -58,19 +58,34 @@ label{font-weight:500}
 }
 .badge-region i{cursor:pointer;opacity:.8}
 .badge-region i:hover{opacity:1}
-.toast{
-  position:fixed;bottom:20px;left:50%;
-  transform:translateX(-50%);
-  background:#16a34a;color:white;
-  padding:14px 24px;border-radius:12px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.2);
-  font-weight:500;display:none;
-  animation:fadein .3s ease-out;
+
+/* 🔶 Toast Shopee (banner no topo) */
+.toast-top {
+  position: fixed;
+  top: 16px; left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 999px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  font-weight: 700;
+  display: none;
+  z-index: 9999;
+  letter-spacing: .2px;
 }
-@keyframes fadein{
-  from{opacity:0;transform:translate(-50%,20px)}
-  to{opacity:1;transform:translate(-50%,0)}
+.toast-top.show {
+  display: block;
+  animation: slideDown .32s ease-out, fadeOut .3s ease-out 2.4s forwards;
 }
+@keyframes slideDown {
+  from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+}
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateX(-50%) translateY(-12px); }
+}
+
 .spinner{
   width:18px;height:18px;
   border:3px solid rgba(255,255,255,.4);
@@ -80,33 +95,6 @@ label{font-weight:500}
   display:inline-block;vertical-align:middle;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* Modal de confirmação */
-#confirmarAtualizacao {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:9999;
-}
-#confirmarAtualizacao .box {
-  background:var(--card);
-  border-radius:18px;
-  box-shadow:var(--shadow);
-  padding:2rem;
-  text-align:center;
-  max-width:360px;
-}
-#confirmarAtualizacao h5 {
-  font-weight:700;
-  color:var(--brand);
-  margin-bottom:10px;
-}
-#confirmarAtualizacao .btns {
-  display:flex;gap:10px;justify-content:center;margin-top:15px;
-}
 </style>
 </head>
 
@@ -179,90 +167,210 @@ label{font-weight:500}
   </div>
 </div>
 
-<!-- Modal confirmação -->
-<div id="confirmarAtualizacao">
-  <div class="box">
-    <i class="fa-solid fa-rotate fa-2x mb-3" style="color:var(--brand);"></i>
-    <h5>Atualizar informações?</h5>
-    <p class="text-muted">Você já possui um cadastro. Deseja atualizar com as novas informações?</p>
-    <div class="btns">
-      <button id="btnCancelar" class="btn btn-secondary">Cancelar</button>
-      <button id="btnConfirmar" class="btn btn-success">Atualizar</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast">✅ Dados salvos com sucesso!</div>
+<!-- 🔶 Banner de confirmação -->
+<div class="toast-top" id="toastTop"><i class="fa-solid fa-circle-check me-2"></i><span id="toastMsg">OK</span></div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const supabase = createClient("https://bzbkqvxixxkcmfrhtcxq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE");
+const supabase = createClient(
+  "https://bzbkqvxixxkcmfrhtcxq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ6YmtxdnhpeHhrY21mcmh0Y3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExMzI2MzUsImV4cCI6MjA3NjcwODYzNX0.TNKG7NIx7HHSTcfU2IYiba9zV0zaPYvhGSImA62LebE"
+);
 
-const whoami=document.getElementById("whoami");
-const avatarImg=document.getElementById("avatarImg");
-const idInput=document.getElementById("id");
-const nomeInput=document.getElementById("nome");
-const cepInput=document.getElementById("cep");
-const regiaoInput=document.getElementById("regiao");
-const cidadeAtual=document.getElementById("cidadeAtual");
-const veiculoSelect=document.getElementById("veiculo");
-const addButton=document.getElementById("add-regiao");
-const lista=document.getElementById("lista-regioes");
-const form=document.getElementById("form-regioes");
-const btnEnviar=document.getElementById("btnEnviar");
-const logout=document.getElementById("logout");
-const toast=document.getElementById("toast");
-const modalConfirm=document.getElementById("confirmarAtualizacao");
-const btnCancelar=document.getElementById("btnCancelar");
-const btnConfirmar=document.getElementById("btnConfirmar");
+const whoami = document.getElementById("whoami");
+const avatarImg = document.getElementById("avatarImg");
+const idInput = document.getElementById("id");
+const nomeInput = document.getElementById("nome");
+const cepInput = document.getElementById("cep");
+const regiaoInput = document.getElementById("regiao");
+const cidadeAtual = document.getElementById("cidadeAtual");
+const veiculoSelect = document.getElementById("veiculo");
+const addButton = document.getElementById("add-regiao");
+const lista = document.getElementById("lista-regioes");
+const form = document.getElementById("form-regioes");
+const btnEnviar = document.getElementById("btnEnviar");
+const logout = document.getElementById("logout");
 
-let itens=[],user=null,jaCadastrado=false;
+const toastTop = document.getElementById("toastTop");
+const toastMsg = document.getElementById("toastMsg");
 
-function showToast(msg,cor="#16a34a"){toast.textContent=msg;toast.style.background=cor;toast.style.display="block";setTimeout(()=>toast.style.display="none",2500);}
-function setLoading(v){btnEnviar.innerHTML=v?'<span class="spinner"></span> Enviando...':'<i class="fa fa-paper-plane"></i> Enviar';btnEnviar.disabled=v;}
-function render(){lista.innerHTML="";itens.forEach((x,i)=>{const s=document.createElement("span");s.className="badge-region";s.innerHTML=`${x.bairro} (${x.cep} • ${x.cidade}) <i class="fa fa-times" onclick="remover(${i})"></i>`;lista.appendChild(s);});}
-window.remover=(i)=>{itens.splice(i,1);render();};
-cepInput.addEventListener("input",()=>{const cep=cepInput.value.replace(/\D/g,"");if(cep.length===8){fetch(`https://viacep.com.br/ws/${cep}/json/`).then(r=>r.json()).then(d=>{regiaoInput.value=d.bairro||"Não encontrado";});}});
-addButton.onclick=()=>{const cep=cepInput.value.trim(),bairro=regiaoInput.value.trim().toUpperCase(),cidade=cidadeAtual.value;if(!cep||cep.length!==8||!bairro)return showToast("CEP inválido ou bairro não encontrado.","#dc2626");if(itens.length>=20)return showToast("Máximo de 20 regiões.","#dc2626");itens.push({cep,bairro,cidade});cepInput.value="";regiaoInput.value="";render();};
-function setAvatarFromUser(u){const url=u?.user_metadata?.avatar_url||u?.user_metadata?.picture;if(url){avatarImg.src=url;avatarImg.style.display="block";}}
+let itens = [], user = null, jaExiste = false;
 
-supabase.auth.onAuthStateChange(async(_,s)=>{if(!s?.user)return location.href="index.html";user=s.user;whoami.textContent=user.email;setAvatarFromUser(user);carregar();});
-(async()=>{const {data:{user:u}}=await supabase.auth.getUser();if(!u)return location.href="index.html";user=u;whoami.textContent=u.email;setAvatarFromUser(u);carregar();})();
-
-async function carregar(){
-  const {data}=await supabase.from("atualizar_bairros").select("*").eq("owner",user.id).maybeSingle();
-  if(data){jaCadastrado=true;idInput.value=data.driver_id;idInput.disabled=true;nomeInput.value=data.nome;veiculoSelect.value=data.veiculo;
-    const ceps=(data.ceps||"").split(","),regs=(data.regioes||"").split(","),cids=(data.cidades||"").split(",");
-    itens=[];for(let i=0;i<ceps.length;i++)itens.push({cep:ceps[i],bairro:regs[i],cidade:cids[i]});render();}
+/* 🔶 Toast Shopee (banner topo) */
+function showToast(msg){
+  toastMsg.textContent = msg;
+  toastTop.classList.remove("show");
+  // reflow para reiniciar animação
+  void toastTop.offsetWidth;
+  toastTop.classList.add("show");
+  // some sozinho no CSS (fadeOut) — não precisa setTimeout aqui
 }
 
-form.addEventListener("submit",async e=>{
-  e.preventDefault();
-  if(itens.length<4)return showToast("Adicione pelo menos 4 regiões","#dc2626");
-  if(jaCadastrado){
-    modalConfirm.style.display="flex";
-    btnCancelar.onclick=()=>modalConfirm.style.display="none";
-    btnConfirmar.onclick=()=>{modalConfirm.style.display="none";salvar(true);};
-  }else salvar(false);
+/* Loading no botão */
+function setLoading(on){
+  if(on){
+    btnEnviar.innerHTML = '<span class="spinner"></span> Salvando...';
+    btnEnviar.disabled = true;
+  } else {
+    btnEnviar.innerHTML = jaExiste
+      ? '<i class="fa fa-save"></i> Atualizar'
+      : '<i class="fa fa-paper-plane"></i> Enviar';
+    btnEnviar.disabled = false;
+  }
+}
+
+function render(){
+  lista.innerHTML = "";
+  itens.forEach((x,i)=>{
+    const tag = document.createElement("span");
+    tag.className="badge-region";
+    tag.innerHTML = `${x.bairro} (${x.cep} • ${x.cidade}) <i class="fa fa-times" onclick="remover(${i})"></i>`;
+    lista.appendChild(tag);
+  });
+}
+window.remover = (i)=>{ itens.splice(i,1); render(); };
+
+/* ViaCEP */
+cepInput.addEventListener("input", ()=>{
+  const cep = cepInput.value.replace(/\D/g,"");
+  if(cep.length === 8){
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      .then(r=>r.json())
+      .then(d=> regiaoInput.value = d.bairro || "Não encontrado")
+      .catch(()=> regiaoInput.value = "Não encontrado");
+  }
 });
 
-async function salvar(atualizando=false){
-  setLoading(true);
-  const payload={
-    owner:user.id,email:user.email,driver_id:idInput.value.trim(),nome:nomeInput.value.trim(),
-    ceps:itens.map(x=>x.cep).join(","),regioes:itens.map(x=>x.bairro).join(","),cidades:itens.map(x=>x.cidade).join(","),
-    veiculo:veiculoSelect.value,updated_at:new Date().toISOString()
-  };
-  const {error}=await supabase.from("atualizar_bairros").upsert(payload,{onConflict:"owner"});
-  if(error){setLoading(false);return showToast("Erro ao salvar","#dc2626");}
-  await supabase.from("atualizar_bairros_log").insert(payload);
-  setLoading(false);
-  showToast(atualizando?"✅ Dados atualizados com sucesso!":"✅ Cadastro realizado com sucesso!");
-  jaCadastrado=true;
+/* Adicionar região */
+addButton.onclick = ()=>{
+  const cep = cepInput.value.trim();
+  const bairro = regiaoInput.value.trim().toUpperCase();
+  const cidade = cidadeAtual.value;
+  if(!cep || cep.length !== 8 || !bairro){
+    showToast("CEP inválido ou bairro não encontrado");
+    return;
+  }
+  if(itens.length >= 20){
+    showToast("Limite máximo: 20 regiões");
+    return;
+  }
+  itens.push({cep,bairro,cidade});
+  cepInput.value = ""; regiaoInput.value = ""; render();
+};
+
+/* Avatar */
+function setAvatarFromUser(u){
+  const url = u?.user_metadata?.avatar_url || u?.user_metadata?.picture ||
+              u?.identities?.[0]?.identity_data?.avatar_url || u?.identities?.[0]?.identity_data?.picture;
+  if(url){ avatarImg.src = url; avatarImg.style.display = "block"; }
 }
 
-logout.onclick=async()=>{await supabase.auth.signOut();location.href="index.html";};
+/* Auth */
+supabase.auth.onAuthStateChange(async(_,session)=>{
+  if(!session?.user) return location.href="index.html";
+  user = session.user;
+  whoami.textContent = user.email;
+  setAvatarFromUser(user);
+  carregar();
+});
+(async()=>{
+  const {data:{user:u}} = await supabase.auth.getUser();
+  if(!u) return location.href="index.html";
+  user=u; whoami.textContent=u.email; setAvatarFromUser(u); carregar();
+})();
+
+/* Carregar dados existentes */
+async function carregar(){
+  const {data, error} = await supabase
+    .from("atualizar_bairros")
+    .select("*")
+    .eq("owner", user.id)
+    .maybeSingle();
+
+  if(error){ console.warn("Carregar erro:", error); }
+
+  if(data){
+    jaExiste = true;
+    idInput.value = data.driver_id;
+    idInput.disabled = true;
+    nomeInput.value = data.nome || "";
+    veiculoSelect.value = data.veiculo || "Moto";
+
+    const ceps = (data.ceps||"").split(",").map(s=>s.trim()).filter(Boolean);
+    const regs = (data.regioes||"").split(",").map(s=>s.trim());
+    const cids = (data.cidades||"").split(",").map(s=>s.trim());
+    itens = [];
+    for(let i=0;i<ceps.length;i++){
+      itens.push({ cep: ceps[i], bairro: (regs[i]||"").toUpperCase(), cidade: cids[i]||"" });
+    }
+    render();
+
+    btnEnviar.innerHTML = '<i class="fa fa-save"></i> Atualizar';
+  }
+}
+
+/* Enviar / Atualizar (sem perguntar) */
+form.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if(itens.length < 4){
+    showToast("Adicione pelo menos 4 regiões");
+    return;
+  }
+
+  setLoading(true);
+  const payload = {
+    owner: user.id,
+    email: user.email,
+    driver_id: idInput.value.trim(),
+    nome: nomeInput.value.trim(),
+    ceps: itens.map(x=>x.cep).join(","),
+    regioes: itens.map(x=>x.bairro).join(","),
+    cidades: itens.map(x=>x.cidade).join(","),
+    veiculo: veiculoSelect.value,
+    updated_at: new Date().toISOString()
+  };
+
+  // trava ID após 1ª gravação
+  if(jaExiste){
+    // força manter o driver_id já salvo
+    const { data: existente } = await supabase
+      .from("atualizar_bairros")
+      .select("driver_id")
+      .eq("owner", user.id)
+      .maybeSingle();
+    if(existente?.driver_id){
+      payload.driver_id = existente.driver_id;
+      idInput.value = existente.driver_id;
+      idInput.disabled = true;
+    }
+  }
+
+  const { error } = await supabase
+    .from("atualizar_bairros")
+    .upsert(payload, { onConflict: "owner" });
+
+  if(error){
+    setLoading(false);
+    showToast("Erro ao salvar");
+    console.error(error);
+    return;
+  }
+
+  // log de mudança
+  await supabase.from("atualizar_bairros_log").insert(payload);
+
+  setLoading(false);
+  showToast(jaExiste ? "Dados atualizados com sucesso!" : "Cadastro realizado com sucesso!");
+
+  jaExiste = true;
+  btnEnviar.innerHTML = '<i class="fa fa-save"></i> Atualizar';
+});
+
+/* Logout */
+logout.onclick = async()=>{
+  await supabase.auth.signOut();
+  location.href = "index.html";
+};
 </script>
 </body>
 </html>
