@@ -200,10 +200,8 @@ let itens = [], user = null, jaExiste = false;
 function showToast(msg){
   toastMsg.textContent = msg;
   toastTop.classList.remove("show");
-  // reflow para reiniciar animação
-  void toastTop.offsetWidth;
+  void toastTop.offsetWidth; // reflow pra reiniciar animação
   toastTop.classList.add("show");
-  // some sozinho no CSS (fadeOut) — não precisa setTimeout aqui
 }
 
 /* Loading no botão */
@@ -241,21 +239,35 @@ cepInput.addEventListener("input", ()=>{
   }
 });
 
-/* Adicionar região */
+/* ✅ Adicionar região — CEP único, região pode repetir (ATUALIZADO) */
 addButton.onclick = ()=>{
   const cep = cepInput.value.trim();
+  const cepNorm = cep.replace(/\D/g,'');     // normaliza só números
   const bairro = regiaoInput.value.trim().toUpperCase();
   const cidade = cidadeAtual.value;
-  if(!cep || cep.length !== 8 || !bairro){
+
+  if(!cepNorm || cepNorm.length !== 8 || !bairro){
     showToast("CEP inválido ou bairro não encontrado");
     return;
   }
+
+  // Bloqueia CEP repetido (independente da região ou cidade)
+  if(itens.some(x => x.cep.replace(/\D/g,'') === cepNorm)){
+    showToast("Este CEP já foi adicionado");
+    return;
+  }
+
   if(itens.length >= 20){
     showToast("Limite máximo: 20 regiões");
     return;
   }
-  itens.push({cep,bairro,cidade});
-  cepInput.value = ""; regiaoInput.value = ""; render();
+
+  // Região/bairro pode repetir; CEP é que deve ser único
+  itens.push({ cep: cepNorm, bairro, cidade });
+
+  cepInput.value = "";
+  regiaoInput.value = "";
+  render();
 };
 
 /* Avatar */
@@ -309,7 +321,7 @@ async function carregar(){
   }
 }
 
-/* Enviar / Atualizar (sem perguntar) */
+/* Enviar / Atualizar (mostra confirmação visual) */
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
   if(itens.length < 4){
@@ -332,7 +344,6 @@ form.addEventListener("submit", async (e)=>{
 
   // trava ID após 1ª gravação
   if(jaExiste){
-    // força manter o driver_id já salvo
     const { data: existente } = await supabase
       .from("atualizar_bairros")
       .select("driver_id")
