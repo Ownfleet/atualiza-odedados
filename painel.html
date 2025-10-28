@@ -57,6 +57,13 @@ tbody tr:hover{background:#fffaf8}
 .col-cidades .clip{max-width:260px}
 .col-veiculo .clip{max-width:120px}
 
+/* Botão copiar na célula */
+.copy-btn{
+  border:0; background:transparent; cursor:pointer; margin-left:8px;
+  color:#6b7280;
+}
+.copy-btn:hover{ color:#111827 }
+
 /* modal */
 .backdrop{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);z-index:100}
 .modal{width:min(94vw,420px);background:#fff;border-radius:16px;padding:18px;box-shadow:0 26px 60px rgba(0,0,0,.25)}
@@ -173,6 +180,7 @@ const toast     = document.getElementById("toast");
 const toastMsg  = document.getElementById("toastMsg");
 
 let allRows = [];
+let currentRows = []; // 🔹 conjunto atualmente exibido (para exportar/ copiar)
 
 /* === UTIL === */
 function showToast(txt){
@@ -187,7 +195,7 @@ function setLoading(btn, on){
 
 /* —— MOSTRAR VISUAL ENXUTO SEM PERDER O DADO COMPLETO —— */
 function summarizeCSV(str, maxItems = 3, maxChars = 120){
-  if(!str) return "";
+  if(!str) return {preview:"", full:""};
   const full = String(str);
   const arr = full.split(",").map(s => s.trim()).filter(Boolean);
   const head = arr.slice(0, maxItems).join(", ");
@@ -197,9 +205,36 @@ function summarizeCSV(str, maxItems = 3, maxChars = 120){
   return { preview, full };
 }
 
+/* CSV de 1 linha (com aspas) */
+function rowToCsvLine(r){
+  const vals = [
+    r.driver_id ?? "",
+    r.nome ?? "",
+    r.ceps ?? "",
+    r.regioes ?? "",
+    r.cidades ?? "",
+    r.veiculo ?? ""
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`);
+  return vals.join(",");
+}
+
+/* Copiar para clipboard */
+async function copyRow(r){
+  try{
+    const header = `driver_id,nome,ceps,regioes,cidades,veiculo`;
+    const csv = header + "\n" + rowToCsvLine(r);
+    await navigator.clipboard.writeText(csv);
+    showToast("Copiado para a área de transferência");
+  }catch(e){
+    console.error(e);
+    showToast("Falha ao copiar");
+  }
+}
+
 /* === RENDER === */
 function render(rows){
   const data = Array.isArray(rows) ? rows : [];
+  currentRows = data; // 🔹 atualiza o conjunto exibido
   countEl.textContent = data.length;
   tbody.innerHTML = "";
   if(!data.length){
@@ -221,7 +256,14 @@ function render(rows){
       <td class="col-ceps"><span class="clip" title="${ceps.full}">${ceps.preview}</span></td>
       <td class="col-regioes"><span class="clip" title="${regioes.full}">${regioes.preview}</span></td>
       <td class="col-cidades"><span class="clip" title="${cidades.full}">${cidades.preview}</span></td>
-      <td class="col-veiculo"><span class="clip" title="${r.veiculo ?? ""}">${r.veiculo ?? ""}</span></td>`;
+      <td class="col-veiculo">
+        <span class="clip" title="${r.veiculo ?? ""}">${r.veiculo ?? ""}</span>
+        <button class="copy-btn" title="Copiar este motorista" aria-label="Copiar este motorista">
+          <i class="fa-regular fa-clipboard"></i>
+        </button>
+      </td>`;
+    const copyBtn = tr.querySelector(".copy-btn");
+    copyBtn.addEventListener("click", () => copyRow(r));
     tbody.appendChild(tr);
   }
 }
@@ -319,7 +361,7 @@ btnSearch.onclick = async () => {
     }
     const set = new Set(ids.map(String));
     const filtrados = base.filter(r => set.has(String(r.driver_id)));
-    render(filtrados);
+    render(filtrados); // 🔹 agora currentRows = filtrados
     showToast("Busca concluída");
   } catch(e){
     alert("Erro na busca: " + (e.message || e));
@@ -331,28 +373,17 @@ btnSearch.onclick = async () => {
 /* === LIMPAR === */
 btnClear.onclick = () => {
   idsBulk.value = "";
-  render([]);
+  render([]); // 🔹 limpa currentRows
 };
 
-/* === EXPORTAR CSV (UTF-8 COM BOM — ACENTOS OK NO EXCEL) === */
+/* === EXPORTAR CSV do que está FILTRADO/EXIBIDO === */
 btnExport.onclick = () => {
-  if(!allRows.length){ alert("Nada para exportar."); return; }
+  if(!currentRows.length){ alert("Nada para exportar."); return; }
 
   const header = ["driver_id","nome","ceps","regioes","cidades","veiculo"];
   const csv = [
     header.join(","),
-    ...allRows.map(r =>
-      [
-        r.driver_id ?? "",
-        r.nome ?? "",
-        r.ceps ?? "",
-        r.regioes ?? "",
-        r.cidades ?? "",
-        r.veiculo ?? ""
-      ]
-        .map(v => `"${String(v).replace(/"/g,'""')}"`)
-        .join(",")
-    )
+    ...currentRows.map(r => rowToCsvLine(r))
   ].join("\n");
 
   // BOM garante que Excel entenda UTF-8 e não quebre acentos
@@ -363,7 +394,7 @@ btnExport.onclick = () => {
   const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
   a.download = `motoristas_${stamp}.csv`;
   a.click();
-  showToast("CSV exportado (UTF-8 fixado)");
+  showToast("CSV exportado (somente linhas exibidas)");
 };
 </script>
 </body>
