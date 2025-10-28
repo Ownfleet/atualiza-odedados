@@ -11,31 +11,55 @@
 :root{
   --brand:#ee4d2d; --brand2:#ff6b3d; --ink:#0f172a;
   --card:rgba(255,255,255,.94); --radius:18px; --shadow:0 20px 50px rgba(238,77,45,.22);
+  --line:#eef2f7; --muted:#6b7280; --ok:#10b981; --warn:#f59e0b;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:Poppins,system-ui,Arial;color:var(--ink);
+body{
+  margin:0;font-family:Poppins,system-ui,Arial;color:var(--ink);
   background:
     radial-gradient(1200px 600px at 85% -10%, #ffd5cc 0, transparent 60%),
     radial-gradient(1200px 600px at -10% 90%, #ffc6b7 0, transparent 55%),
     linear-gradient(135deg,var(--brand),var(--brand2));
   min-height:100vh;
 }
-.container{max-width:1160px;margin:34px auto;padding:0 18px}
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-.header{display:flex;align-items:center;justify-content:space-between;padding:18px;gap:12px}
+.container{max-width:1160px;margin:34px auto;padding:0 18px;animation:fadeIn .35s ease-out}
+.card{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
+  backdrop-filter: blur(6px);
+}
+.header{
+  display:flex;align-items:center;justify-content:space-between;padding:18px;gap:12px;
+  background:linear-gradient(180deg,#fff7f5,rgba(255,255,255,.85));
+  border-bottom:1px solid var(--line);
+}
 .brand{display:flex;gap:12px;align-items:center}
-.logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(145deg,#fff,#fff7f5);display:grid;place-items:center;box-shadow:0 10px 30px rgba(238,77,45,.25)}
+.logo{
+  width:48px;height:48px;border-radius:12px;
+  background:linear-gradient(145deg,#fff,#fff7f5);
+  display:grid;place-items:center;
+  box-shadow:0 10px 30px rgba(238,77,45,.25);
+  transform:translateZ(0);
+}
 .logo i{color:var(--brand);font-size:22px}
 .title h1{margin:0;font-size:1.35rem;color:var(--brand);font-weight:900}
 .subtitle{margin:2px 0 0;color:#475569;font-size:.9rem}
 
 /* toolbar */
 .toolbar{padding:0 18px 18px 18px}
-textarea{width:100%;min-height:56px;padding:12px 14px;border-radius:12px;border:1px solid #e6e6e6;resize:vertical}
+textarea{
+  width:100%;min-height:56px;padding:12px 14px;border-radius:12px;border:1px solid #e6e6e6;resize:vertical;
+  transition:border .2s, box-shadow .2s;
+}
+textarea:focus{outline:none;border-color:#ffb199;box-shadow:0 0 0 4px rgba(238,77,45,.12)}
 .controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;align-items:center}
-.btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:.6rem}
+.btn{
+  border:0;border-radius:12px;padding:10px 14px;font-weight:800;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:.6rem;
+  transition:transform .15s ease, box-shadow .15s ease, opacity .2s;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
 .btn-primary{background:var(--brand)}
-.btn-green{background:#10b981}
+.btn-green{background:var(--ok)}
 .btn-blue{background:#0ea5e9}
 .btn-gray{background:#6b7280}
 .btn:disabled{opacity:.6;cursor:not-allowed}
@@ -43,12 +67,18 @@ textarea{width:100%;min-height:56px;padding:12px 14px;border-radius:12px;border:
 /* table */
 .table-wrap{overflow:auto;border-top:1px solid #f3f4f6}
 table{width:100%;border-collapse:collapse;background:#fff}
-thead th{position:sticky;top:0;background:#fff7f5;padding:12px 14px;text-align:left;border-bottom:1px solid #f1f5f9}
+thead th{
+  position:sticky;top:0;background:#fff7f5;padding:12px 14px;text-align:left;border-bottom:1px solid #f1f5f9;
+  font-weight:800;color:#263043;
+}
 tbody td{padding:12px 14px;border-bottom:1px solid #f6f7fb;font-size:.95rem;vertical-align:top}
+tbody tr{
+  animation:rowIn .25s ease both;
+}
 tbody tr:hover{background:#fffaf8}
 .empty{padding:28px;text-align:center;color:#64748b}
 
-/* —— VISUAL ENXUTO (ellipsis) —— */
+/* col widths + ellipsis */
 .clip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 .col-id .clip{max-width:120px}
 .col-nome .clip{max-width:240px}
@@ -56,13 +86,20 @@ tbody tr:hover{background:#fffaf8}
 .col-regioes .clip{max-width:380px}
 .col-cidades .clip{max-width:260px}
 .col-veiculo .clip{max-width:120px}
+.col-acoes{width:130px}
 
-/* Botão copiar na célula */
-.copy-btn{
-  border:0; background:transparent; cursor:pointer; margin-left:8px;
-  color:#6b7280;
+/* actions buttons */
+.row-actions{display:flex;gap:8px;align-items:center}
+.icon-btn{
+  border:0;background:#f6f7fb;color:#334155;border-radius:10px;padding:8px 10px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:.45rem;font-weight:700;
+  transition:transform .12s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+  box-shadow:0 2px 0 rgba(15,23,42,.05);
 }
-.copy-btn:hover{ color:#111827 }
+.icon-btn:hover{transform:translateY(-1px);background:#eef1f9;box-shadow:0 4px 10px rgba(15,23,42,.08)}
+.icon-btn:active{transform:translateY(0)}
+.icon-copy{color:#0ea5e9}
+.icon-expand{color:#f97316}
 
 /* modal */
 .backdrop{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);z-index:100}
@@ -76,8 +113,16 @@ tbody tr:hover{background:#fffaf8}
 .kbd{background:#eef2ff;border-radius:6px;padding:4px 8px;font-weight:700;color:#0f172a;font-size:.82rem}
 
 /* toast */
-.toast{position:fixed;right:18px;bottom:18px;background:rgba(255,255,255,.96);padding:10px 14px;border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none}
-.toast.show{display:block}
+.toast{
+  position:fixed;right:18px;bottom:18px;background:rgba(255,255,255,.98);padding:10px 14px;border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,.18);display:none;font-weight:800;color:#0f172a
+}
+.toast.show{display:block;animation:pop .2s ease}
+
+/* animations */
+@keyframes fadeIn {from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)}}
+@keyframes rowIn {from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)}}
+@keyframes pop {from{transform:scale(.98);opacity:.8} to{transform:scale(1);opacity:1}}
 
 @media (max-width:640px){
   .header{flex-direction:column;align-items:flex-start;gap:8px}
@@ -126,10 +171,11 @@ tbody tr:hover{background:#fffaf8}
             <th class="col-regioes" style="width:280px">Região/Bairro(s)</th>
             <th class="col-cidades" style="width:200px">Cidade(s)</th>
             <th class="col-veiculo" style="width:140px">Veículo</th>
+            <th class="col-acoes">Ações</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr class="empty"><td colspan="6">Sem dados. Insira a senha para liberar o painel.</td></tr>
+          <tr class="empty"><td colspan="7">Sem dados. Insira a senha para liberar o painel.</td></tr>
         </tbody>
       </table>
     </div>
@@ -180,7 +226,7 @@ const toast     = document.getElementById("toast");
 const toastMsg  = document.getElementById("toastMsg");
 
 let allRows = [];
-let currentRows = []; // 🔹 conjunto atualmente exibido (para exportar/ copiar)
+let currentRows = []; // 🔹 o que está exibido agora (para exportar/copiar)
 
 /* === UTIL === */
 function showToast(txt){
@@ -205,7 +251,7 @@ function summarizeCSV(str, maxItems = 3, maxChars = 120){
   return { preview, full };
 }
 
-/* CSV de 1 linha (com aspas) */
+/* === CSV de 1 linha (sem cabeçalho) === */
 function rowToCsvLine(r){
   const vals = [
     r.driver_id ?? "",
@@ -218,29 +264,28 @@ function rowToCsvLine(r){
   return vals.join(",");
 }
 
-/* Copiar para clipboard */
+/* Copiar dados de 1 motorista (somente informações) */
 async function copyRow(r){
   try{
-    const header = `driver_id,nome,ceps,regioes,cidades,veiculo`;
-    const csv = header + "\n" + rowToCsvLine(r);
-    await navigator.clipboard.writeText(csv);
-    showToast("Copiado para a área de transferência");
+    const csvLine = rowToCsvLine(r);        // apenas a linha
+    await navigator.clipboard.writeText(csvLine);
+    showToast("Copiado!");
   }catch(e){
     console.error(e);
     showToast("Falha ao copiar");
   }
 }
 
-/* === RENDER === */
+/* Render da tabela */
 function render(rows){
   const data = Array.isArray(rows) ? rows : [];
-  currentRows = data; // 🔹 atualiza o conjunto exibido
+  currentRows = data; // 🔹 atualiza conjunto exibido
   countEl.textContent = data.length;
   tbody.innerHTML = "";
   if(!data.length){
     const tr = document.createElement("tr");
     tr.className = "empty";
-    tr.innerHTML = `<td colspan="6">Nenhum registro encontrado.</td>`;
+    tr.innerHTML = `<td colspan="7">Nenhum registro encontrado.</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -256,14 +301,30 @@ function render(rows){
       <td class="col-ceps"><span class="clip" title="${ceps.full}">${ceps.preview}</span></td>
       <td class="col-regioes"><span class="clip" title="${regioes.full}">${regioes.preview}</span></td>
       <td class="col-cidades"><span class="clip" title="${cidades.full}">${cidades.preview}</span></td>
-      <td class="col-veiculo">
-        <span class="clip" title="${r.veiculo ?? ""}">${r.veiculo ?? ""}</span>
-        <button class="copy-btn" title="Copiar este motorista" aria-label="Copiar este motorista">
-          <i class="fa-regular fa-clipboard"></i>
-        </button>
+      <td class="col-veiculo"><span class="clip" title="${r.veiculo ?? ""}">${r.veiculo ?? ""}</span></td>
+      <td class="col-acoes">
+        <div class="row-actions">
+          <button class="icon-btn icon-copy" title="Copiar dados">
+            <i class="fa-regular fa-clipboard"></i><span>Copiar</span>
+          </button>
+          <button class="icon-btn icon-expand" title="Ver completo">
+            <i class="fa-solid fa-up-right-and-down-left-from-center"></i><span>Ver</span>
+          </button>
+        </div>
       </td>`;
-    const copyBtn = tr.querySelector(".copy-btn");
-    copyBtn.addEventListener("click", () => copyRow(r));
+    const [btnCopy, btnView] = tr.querySelectorAll(".icon-btn");
+    btnCopy.addEventListener("click", () => copyRow(r));
+    btnView.addEventListener("click", () => {
+      const txt = [
+        `ID: ${r.driver_id ?? ""}`,
+        `Nome: ${r.nome ?? ""}`,
+        `CEP(s): ${r.ceps ?? ""}`,
+        `Região(s): ${r.regioes ?? ""}`,
+        `Cidade(s): ${r.cidades ?? ""}`,
+        `Veículo: ${r.veiculo ?? ""}`
+      ].join("\n");
+      navigator.clipboard.writeText(txt).then(()=>showToast("Detalhes copiados")).catch(()=>showToast("Falha ao copiar"));
+    });
     tbody.appendChild(tr);
   }
 }
@@ -336,7 +397,6 @@ async function loadAll(){
     setLoading(btnLoadAll, false);
   }
 }
-
 btnLoadAll.onclick = loadAll;
 
 /* === BUSCAR POR IDS (usa base carregada) === */
@@ -345,7 +405,6 @@ btnSearch.onclick = async () => {
   if(!ids.length){ alert("Informe ao menos um ID."); return; }
   setLoading(btnSearch, true);
   try{
-    // usa a base já carregada (RPC/SELECT) para filtrar
     let base = allRows.length ? allRows : [];
     if(!base.length){
       const rpc = await supabase.rpc("listar_atualizar_bairros");
@@ -383,7 +442,12 @@ btnExport.onclick = () => {
   const header = ["driver_id","nome","ceps","regioes","cidades","veiculo"];
   const csv = [
     header.join(","),
-    ...currentRows.map(r => rowToCsvLine(r))
+    ...currentRows.map(r => {
+      // apenas dados, com aspas e escape
+      const vals = [r.driver_id??"", r.nome??"", r.ceps??"", r.regioes??"", r.cidades??"", r.veiculo??""]
+        .map(v => `"${String(v).replace(/"/g,'""')}"`);
+      return vals.join(",");
+    })
   ].join("\n");
 
   // BOM garante que Excel entenda UTF-8 e não quebre acentos
@@ -394,7 +458,7 @@ btnExport.onclick = () => {
   const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,"-");
   a.download = `motoristas_${stamp}.csv`;
   a.click();
-  showToast("CSV exportado (somente linhas exibidas)");
+  showToast("CSV exportado (linhas exibidas)");
 };
 </script>
 </body>
